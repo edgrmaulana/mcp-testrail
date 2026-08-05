@@ -1,7 +1,5 @@
 # TestRail MCP Server
 
-<a href="https://flatt.tech/oss/gmo/trampoline" target="_blank"><img src="https://flatt.tech/assets/images/badges/gmo-oss.svg" height="24px"/></a>
-
 This Model Context Protocol (MCP) server provides tools for interacting with TestRail directly from Claude AI and other MCP-supported clients like Cursor. It allows you to manage test cases, projects, suites, runs, and more without leaving your conversation with the AI.
 
 ## Available Tools
@@ -31,7 +29,7 @@ You can connect this MCP server by setting like the below. This method uses `npx
   "mcpServers": {
     "testrail": {
       "command": "npx",
-      "args": ["@bun913/mcp-testrail@latest"],
+      "args": ["@edgrmaulana/mcp-testrail@latest"],
       "env": {
         "TESTRAIL_URL": "https://your-instance.testrail.io", // Replace with your TestRail URL
         "TESTRAIL_USERNAME": "your-email@example.com", // Replace with your TestRail username
@@ -68,7 +66,7 @@ You can connect this MCP server by setting like the below. This method uses `npx
     "mcpServers": {
       "testrail": {
         "command": "/Users/you/.nvm/versions/node/v24.15.0/bin/npx",
-        "args": ["@bun913/mcp-testrail@latest"],
+        "args": ["@edgrmaulana/mcp-testrail@latest"],
         "env": {
           "TESTRAIL_URL": "https://your-instance.testrail.io",
           "TESTRAIL_USERNAME": "your-email@example.com",
@@ -100,6 +98,8 @@ You can connect this MCP server by setting like the below. This method uses `npx
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Acknowledgements
+
+This project is a fork of [bun913/mcp-testrail](https://github.com/bun913/mcp-testrail), originally created and maintained by [bun913](https://github.com/bun913). Full credit for the original work goes to the upstream author and contributors. This fork continues the project under [@edgrmaulana/mcp-testrail](https://github.com/edgrmaulana/mcp-testrail).
 
 - [TestRail API](https://docs.testrail.techmatrix.jp/testrail/docs/702/api/)
 - [Model Context Protocol SDK](https://github.com/modelcontextprotocol/typescript-sdk)
