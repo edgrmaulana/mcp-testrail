@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 0.20.0)"
+        required: true
+        type: string
 
 jobs:
   release:
@@ -14,7 +20,12 @@ jobs:
     steps:
       - name: Get semantic version
         id: semver
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
 
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -24,10 +35,6 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-
-      - uses: flatt-security/setup-takumi-guard-npm@9a5d797c2085b6326d3a2985c08e3a114b9b88c1 # v1.1.1
-        with:
-          bot-id: "BT01KPGC0DQQM4GSQJXHGAJ7C87G"
 
       - name: Update package version
         run: npm version ${{ steps.semver.outputs.version }} --no-git-tag-version
@@ -43,6 +50,8 @@ jobs:
       
       - name: Publish to npm
         run: npm publish --provenance --access public --registry https://registry.npmjs.org
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
