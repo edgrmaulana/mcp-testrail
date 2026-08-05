@@ -21,7 +21,7 @@ export function registerResultTools(
 	// Get test results for a test
 	server.tool(
 		"getResults",
-		"Retrieves test results for a specific test / 特定のテストのテスト結果を取得します",
+		"Retrieves test results for a specific test",
 		getResultsSchema,
 		async ({ testId, ...filters }) => {
 			try {
@@ -54,7 +54,7 @@ export function registerResultTools(
 	// Get test results for a specific test case in a run
 	server.tool(
 		"getResultsForCase",
-		"Retrieves test results for a specific test case in a test run / テスト実行内の特定のテストケースのテスト結果を取得します",
+		"Retrieves test results for a specific test case in a test run",
 		getResultsForCaseSchema,
 		async ({ runId, caseId, ...filters }) => {
 			try {
@@ -88,7 +88,7 @@ export function registerResultTools(
 	// Get all test results for a test run
 	server.tool(
 		"getResultsForRun",
-		"Retrieves all test results for a test run / テスト実行の全テスト結果を取得します",
+		"Retrieves all test results for a test run",
 		getResultsForRunSchema,
 		async ({ runId, ...filters }) => {
 			try {
@@ -121,7 +121,7 @@ export function registerResultTools(
 	// Add a result for a specific test case in a run
 	server.tool(
 		"addResultForCase",
-		"Adds a test result for a specific test case in a test run / テスト実行内の特定のテストケースにテスト結果を追加します",
+		"Adds a test result for a specific test case in a test run",
 		addResultForCaseSchema,
 		async ({ runId, caseId, ...resultData }) => {
 			try {
@@ -188,7 +188,7 @@ export function registerResultTools(
 	// Add results for multiple test cases
 	server.tool(
 		"addResultsForCases",
-		"Adds test results for multiple test cases in a test run / テスト実行内の複数のテストケースにテスト結果を追加します",
+		"Adds test results for multiple test cases in a test run",
 		addResultsForCasesSchema,
 		async ({ runId, results }) => {
 			try {

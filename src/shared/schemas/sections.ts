@@ -15,9 +15,7 @@ export const getSectionsSchema = {
 	limit: z
 		.number()
 		.optional()
-		.describe(
-			"Maximum number of sections to return (default 250, max 250)",
-		),
+		.describe("Maximum number of sections to return (default 250, max 250)"),
 	offset: z
 		.number()
 		.optional()

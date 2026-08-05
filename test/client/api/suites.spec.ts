@@ -64,7 +64,7 @@ describe('Suites API', () => {
     // Test method
     const result = await client.suites.getSuites(1);
     
-    // Verify axios get was called correctly - メソッドは単にパスだけを受け取り、paramsを受け取らない
+    // Verify axios get was called correctly - the method takes only the path, no params
     expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_suites/1');
     
     // Verify result

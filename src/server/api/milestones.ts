@@ -15,7 +15,7 @@ export function registerMilestoneTools(
 	// Get all milestones for a project
 	server.tool(
 		"getMilestones",
-		"Retrieves all milestones for a specified TestRail project / 指定されたTestRailプロジェクトの全マイルストーンを取得します",
+		"Retrieves all milestones for a specified TestRail project",
 		getMilestonesSchema,
 		async ({ projectId }) => {
 			try {

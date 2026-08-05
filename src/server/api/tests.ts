@@ -16,7 +16,7 @@ export function registerTestTools(
 	// Get a specific test case
 	server.tool(
 		"getTests",
-		"Retrieves a list of tests for a test run / テスト実行に含まれるテスト一覧を取得します",
+		"Retrieves a list of tests for a test run",
 		{
 			runId: getTestsSchema.shape.runId,
 			limit: z
@@ -64,7 +64,7 @@ export function registerTestTools(
 	// Get a specific test case
 	server.tool(
 		"getTest",
-		"Retrieves complete details for a single test, including all fields such as status, type, and results / 単一のテストの完全な詳細（ステータス、タイプ、結果などのすべてのフィールドを含む）を取得します",
+		"Retrieves complete details for a single test, including all fields such as status, type, and results",
 		{
 			testId: getTestSchema.shape.testId,
 		},

@@ -20,7 +20,7 @@ export function registerPlanTools(
 	// Get all test plans for a project
 	server.tool(
 		"getPlans",
-		"Retrieves all test plans for a specified TestRail project / 指定されたTestRailプロジェクトの全テストプランを取得します",
+		"Retrieves all test plans for a specified TestRail project",
 		getPlansSchema,
 		async ({ projectId }) => {
 			try {
@@ -50,7 +50,7 @@ export function registerPlanTools(
 	// Add a new test plan
 	server.tool(
 		"addPlan",
-		"Creates a new test plan in a TestRail project / TestRailプロジェクトに新しいテストプランを作成します",
+		"Creates a new test plan in a TestRail project",
 		{
 			projectId: addPlanSchema.shape.projectId,
 			name: addPlanSchema.shape.name,
@@ -87,7 +87,7 @@ export function registerPlanTools(
 	// Add a plan entry
 	server.tool(
 		"addPlanEntry",
-		"Adds a new test plan entry to an existing test plan / 既存のテストプランに新しいテストプランエントリーを追加します",
+		"Adds a new test plan entry to an existing test plan",
 		{
 			planId: addPlanEntrySchema.shape.planId,
 			suiteId: addPlanEntrySchema.shape.suiteId,
@@ -129,7 +129,7 @@ export function registerPlanTools(
 	// Add a run to plan entry
 	server.tool(
 		"addRunToPlanEntry",
-		"Adds a new test run to an existing plan entry / 既存のプランエントリーに新しいテストランを追加します",
+		"Adds a new test run to an existing plan entry",
 		{
 			planId: addRunToPlanEntrySchema.shape.planId,
 			entryId: addRunToPlanEntrySchema.shape.entryId,

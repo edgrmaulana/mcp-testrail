@@ -20,10 +20,10 @@ export function registerSuiteTools(
 	// Get all test suites for a project
 	server.tool(
 		"getSuites",
-		"Retrieves all test suites for a specified TestRail project / 指定されたTestRailプロジェクトの全テストスイートを取得します",
+		"Retrieves all test suites for a specified TestRail project",
 		{
 			projectId: getSuitesSchema.shape.projectId.describe(
-				"TestRail Project ID to get suites from / スイート一覧を取得するTestRailプロジェクトID",
+				"TestRail Project ID to get suites from",
 			),
 		},
 		async (args, extra) => {
@@ -55,10 +55,10 @@ export function registerSuiteTools(
 	// Get a specific test suite
 	server.tool(
 		"getSuite",
-		"Retrieves details of a specific test suite by ID / 特定のテストスイートの詳細をIDで取得します",
+		"Retrieves details of a specific test suite by ID",
 		{
 			suiteId: getSuiteSchema.shape.suiteId.describe(
-				"TestRail Suite ID to retrieve / 取得するTestRailスイートID",
+				"TestRail Suite ID to retrieve",
 			),
 		},
 		async (args, extra) => {
@@ -90,16 +90,14 @@ export function registerSuiteTools(
 	// Create a new test suite
 	server.tool(
 		"addSuite",
-		"Creates a new test suite in the specified project / 指定されたプロジェクトに新しいテストスイートを作成します",
+		"Creates a new test suite in the specified project",
 		{
 			projectId: addSuiteSchema.shape.projectId.describe(
-				"TestRail Project ID where the suite will be created / スイートを作成するTestRailプロジェクトID",
+				"TestRail Project ID where the suite will be created",
 			),
-			name: addSuiteSchema.shape.name.describe(
-				"Name of the test suite / テストスイートの名前",
-			),
+			name: addSuiteSchema.shape.name.describe("Name of the test suite"),
 			description: addSuiteSchema.shape.description.describe(
-				"Description of the test suite (optional) / テストスイートの説明（任意）",
+				"Description of the test suite (optional)",
 			),
 		},
 		async (args, extra) => {
@@ -135,16 +133,16 @@ export function registerSuiteTools(
 	// Update an existing test suite
 	server.tool(
 		"updateSuite",
-		"Updates an existing test suite / 既存のテストスイートを更新します",
+		"Updates an existing test suite",
 		{
 			suiteId: updateSuiteSchema.shape.suiteId.describe(
-				"TestRail Suite ID to update / 更新するTestRailスイートID",
+				"TestRail Suite ID to update",
 			),
 			name: updateSuiteSchema.shape.name.describe(
-				"New name for the test suite (optional) / テストスイートの新しい名前（任意）",
+				"New name for the test suite (optional)",
 			),
 			description: updateSuiteSchema.shape.description.describe(
-				"New description for the test suite (optional) / テストスイートの新しい説明（任意）",
+				"New description for the test suite (optional)",
 			),
 		},
 		async (args, extra) => {

@@ -22,7 +22,7 @@ export function registerSectionTools(
 	// Get a specific section
 	server.tool(
 		"getSection",
-		"Retrieves details of a specific section by ID / 特定のセクションの詳細をIDで取得します",
+		"Retrieves details of a specific section by ID",
 		getSectionSchema,
 		async ({ sectionId }) => {
 			try {
@@ -52,7 +52,7 @@ export function registerSectionTools(
 	// Get sections for a project or suite with pagination
 	server.tool(
 		"getSections",
-		"Retrieves sections for a specified project and suite. Supports pagination via limit and offset parameters (default: limit=250, offset=0). Use _links.next to determine if more pages are available. / 指定されたプロジェクトとスイートのセクションを取得します。limitとoffsetパラメータでページネーションをサポートします。",
+		"Retrieves sections for a specified project and suite. Supports pagination via limit and offset parameters (default: limit=250, offset=0). Use _links.next to determine if more pages are available.",
 		getSectionsSchema,
 		async ({ projectId, suiteId, limit, offset }) => {
 			try {
@@ -94,7 +94,7 @@ export function registerSectionTools(
 	// Create a new section
 	server.tool(
 		"addSection",
-		"Creates a new section in a TestRail project / TestRailプロジェクトに新しいセクションを作成します",
+		"Creates a new section in a TestRail project",
 		addSectionSchema,
 		async ({ projectId, name, description, suiteId, parentId }) => {
 			try {
@@ -134,7 +134,7 @@ export function registerSectionTools(
 	// Move a section
 	server.tool(
 		"moveSection",
-		"Moves a section to a new position in the test hierarchy / テスト階層内の新しい位置にセクションを移動します",
+		"Moves a section to a new position in the test hierarchy",
 		moveSectionSchema,
 		async ({ sectionId, parentId, afterId }) => {
 			try {
@@ -175,7 +175,7 @@ export function registerSectionTools(
 	// Update a section
 	server.tool(
 		"updateSection",
-		"Updates an existing section / 既存のセクションを更新します",
+		"Updates an existing section",
 		updateSectionSchema,
 		async ({ sectionId, name, description }) => {
 			try {
@@ -212,7 +212,7 @@ export function registerSectionTools(
 	// Delete a section
 	server.tool(
 		"deleteSection",
-		"Deletes a section / セクションを削除します",
+		"Deletes a section",
 		deleteSectionSchema,
 		async ({ sectionId, soft }) => {
 			try {

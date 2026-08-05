@@ -21,7 +21,7 @@ export function registerProjectTools(
 	// Get all projects
 	server.tool(
 		"getProjects",
-		"Retrieves all TestRail projects / すべてのTestRailプロジェクトを取得します",
+		"Retrieves all TestRail projects",
 		{},
 		async (args, extra) => {
 			try {
@@ -51,10 +51,10 @@ export function registerProjectTools(
 	// Get a specific project by ID
 	server.tool(
 		"getProject",
-		"Retrieves details of a specific TestRail project by ID / 特定のTestRailプロジェクトの詳細をIDで取得します",
+		"Retrieves details of a specific TestRail project by ID",
 		{
 			projectId: getProjectSchema.shape.projectId.describe(
-				"TestRail Project ID to retrieve / 取得するTestRailプロジェクトID",
+				"TestRail Project ID to retrieve",
 			),
 		},
 		async (args, extra) => {

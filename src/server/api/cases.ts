@@ -446,7 +446,7 @@ export function registerCaseTools(
 	// Delete a test case
 	server.tool(
 		"deleteCase",
-		"Deletes a test case from TestRail / TestRailからテストケースを削除します",
+		"Deletes a test case from TestRail",
 		{ caseId: deleteTestCaseSchema.shape.caseId },
 		async (args, extra) => {
 			try {
@@ -474,7 +474,7 @@ export function registerCaseTools(
 	// Get all test case types
 	server.tool(
 		"getCaseTypes",
-		"Retrieves all available test case types in TestRail / TestRailで利用可能な全テストケースタイプを取得します",
+		"Retrieves all available test case types in TestRail",
 		{},
 		async (args, extra) => {
 			try {
@@ -504,7 +504,7 @@ export function registerCaseTools(
 	// Get all test case fields
 	server.tool(
 		"getCaseFields",
-		"Retrieves all available test case fields in TestRail / TestRailで利用可能な全テストケースフィールドを取得します",
+		"Retrieves all available test case fields in TestRail",
 		{},
 		async (args, extra) => {
 			try {
@@ -534,7 +534,7 @@ export function registerCaseTools(
 	// Copy test cases to section
 	server.tool(
 		"copyToSection",
-		"Copies specified test cases to a target section while keeping the originals / 指定されたテストケースを対象のセクションにコピーし、元のケースは保持します",
+		"Copies specified test cases to a target section while keeping the originals",
 		{
 			caseIds: copyTestCasesToSectionSchema.shape.caseIds,
 			sectionId: copyTestCasesToSectionSchema.shape.sectionId,
@@ -571,7 +571,7 @@ export function registerCaseTools(
 	// Move test cases to section
 	server.tool(
 		"moveToSection",
-		"Moves specified test cases to a target section / 指定されたテストケースを対象のセクションに移動します",
+		"Moves specified test cases to a target section",
 		{
 			caseIds: moveTestCasesToSectionSchema.shape.caseIds,
 			sectionId: moveTestCasesToSectionSchema.shape.sectionId,
@@ -608,7 +608,7 @@ export function registerCaseTools(
 	// Get test case history
 	server.tool(
 		"getCaseHistory",
-		"Retrieves the change history of a test case including updates to fields and custom fields / テストケースの変更履歴（フィールドとカスタムフィールドの更新を含む）を取得します",
+		"Retrieves the change history of a test case including updates to fields and custom fields",
 		{ caseId: getTestCaseHistorySchema.shape.caseId },
 		async (args, extra) => {
 			try {
@@ -639,7 +639,7 @@ export function registerCaseTools(
 	// Update multiple test cases
 	server.tool(
 		"updateCases",
-		"Updates multiple test cases simultaneously with the same field values / 複数のテストケースを同じフィールド値で一括更新します. NOTE: templateId=2 is required to use customStepsSeparated (array of step objects with 'content' and 'expected' fields). For simple text steps, use customSteps and customExpected instead. Use customFields for any additional custom fields (e.g., {custom_case_security_score: 'high'}).",
+		"Updates multiple test cases simultaneously with the same field values. NOTE: templateId=2 is required to use customStepsSeparated (array of step objects with 'content' and 'expected' fields). For simple text steps, use customSteps and customExpected instead. Use customFields for any additional custom fields (e.g., {custom_case_security_score: 'high'}).",
 		{
 			projectId: updateTestCasesSchema.shape.projectId,
 			suiteId: updateTestCasesSchema.shape.suiteId,

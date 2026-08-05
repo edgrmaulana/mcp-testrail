@@ -14,7 +14,7 @@ export function registerSharedStepTools(
 ): void {
 	server.tool(
 		"getSharedSteps",
-		"Retrieves all shared steps for a specified TestRail project / 指定されたTestRailプロジェクトの全共有ステップを取得します",
+		"Retrieves all shared steps for a specified TestRail project",
 		getSharedStepsSchema,
 		async ({ projectId, ...filters }) => {
 			try {

@@ -17,7 +17,7 @@ describe('TestRailClient Configuration', () => {
   });
 
   it('successfully creates a client instance', () => {
-    // クライアントインスタンスが正しく作成されていることを確認
+    // Verify the client instance is created correctly
     expect(client).toBeDefined();
     expect(client.setHeader).toBeInstanceOf(Function);
   });

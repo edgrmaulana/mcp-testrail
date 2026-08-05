@@ -20,7 +20,7 @@ export function registerRunTools(
 	// Get all test runs for a project
 	server.tool(
 		"getRuns",
-		"Retrieves all test runs for a specified TestRail project / 指定されたTestRailプロジェクトの全テスト実行を取得します",
+		"Retrieves all test runs for a specified TestRail project",
 		getRunsSchema,
 		async ({ projectId, createdBy, ...filters }) => {
 			try {
@@ -62,7 +62,7 @@ export function registerRunTools(
 	// Get a specific test run
 	server.tool(
 		"getRun",
-		"Retrieves details of a specific test run by ID / 特定のテスト実行の詳細をIDで取得します",
+		"Retrieves details of a specific test run by ID",
 		getRunSchema,
 		async ({ runId }) => {
 			try {
@@ -92,7 +92,7 @@ export function registerRunTools(
 	// Create a new test run
 	server.tool(
 		"addRun",
-		"Creates a new test run in a TestRail project / TestRailプロジェクトに新しいテスト実行を作成します",
+		"Creates a new test run in a TestRail project",
 		addRunSchema,
 		async ({
 			projectId,
@@ -145,7 +145,7 @@ export function registerRunTools(
 	// Update an existing test run
 	server.tool(
 		"updateRun",
-		"Updates an existing test run / 既存のテスト実行を更新します",
+		"Updates an existing test run",
 		updateRunSchema,
 		async ({
 			runId,
