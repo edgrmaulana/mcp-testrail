@@ -280,6 +280,7 @@ export const TestRailCaseSchema = z.object({
 	custom_preconds: z.string().nullable().optional(),
 	custom_steps: z.string().nullable().optional(),
 	custom_expected: z.string().nullable().optional(),
+	custom_steps_separated: z.array(TestRailStepSchema).nullable().optional(),
 });
 export type TestRailCase = z.infer<typeof TestRailCaseSchema>;
 

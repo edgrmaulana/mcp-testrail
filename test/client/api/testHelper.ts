@@ -6,8 +6,19 @@ import { TestRailClientConfig } from '../../../src/client/api/baseClient.js';
 // Mock axios
 vi.mock('axios');
 
-// Function to set up standard mocks
-export function setupMocks() {
+// Function to set up standard mocks.
+// Return type is the mocked instance itself so specs can call vitest mock
+// methods (mockResolvedValue, etc.) on get/post without casting each site.
+type MockedAxiosInstance = AxiosInstance & {
+  get: ReturnType<typeof vi.fn>;
+  post: ReturnType<typeof vi.fn>;
+  put: ReturnType<typeof vi.fn>;
+  patch: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
+  request: ReturnType<typeof vi.fn>;
+};
+
+export function setupMocks(): MockedAxiosInstance {
   // Mock axios instance
   const mockAxiosInstance = {
     get: vi.fn(),
@@ -34,7 +45,7 @@ export function setupMocks() {
         clear: vi.fn()
       }
     }
-  } as unknown as AxiosInstance;
+  } as unknown as MockedAxiosInstance;
   
   // Setup axios mocks
   vi.mocked(axios.create).mockReturnValue(mockAxiosInstance);

@@ -542,8 +542,68 @@ describe('Cases API', () => {
     
     // Test method should throw validation error
     await expect(client.cases.updateCases(1, 1, invalidCaseData, caseIds)).rejects.toThrow();
-    
+
     // Verify axios post was not called
     expect(mockAxiosInstance.post).not.toHaveBeenCalled();
   });
-}); 
+
+  // TestRail returns HTTP 500 (but still creates/updates the record) when a
+  // required multi-select custom field is present. These assert the recovery path.
+  it('recovers the created case when addCase gets a spurious 500', async () => {
+    const createdCase = {
+      id: 42,
+      title: 'Multi-select case',
+      section_id: 5,
+      custom_platform: [4],
+    };
+    const error500 = {
+      response: { status: 500, data: { error: 'An unexpected error occurred.' } },
+    };
+    // add_case POST fails with 500...
+    mockAxiosInstance.post.mockRejectedValue(error500);
+    // ...recovery walks section -> suite -> cases and finds the created case.
+    mockAxiosInstance.get
+      .mockResolvedValueOnce({ data: { suite_id: 7 } }) // get_section
+      .mockResolvedValueOnce({ data: { project_id: 3 } }) // get_suite
+      .mockResolvedValueOnce({
+        data: { cases: [{ ...createdCase, id: 40 }, createdCase] },
+      }); // get_cases -> newest (id 42) wins
+
+    const result = await client.cases.addCase(5, { title: 'Multi-select case', custom_platform: [4] });
+
+    expect(result).toEqual(createdCase);
+    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_cases/3', {
+      params: { suite_id: 7, section_id: 5, limit: 250 },
+    });
+  });
+
+  it('re-throws when addCase 500s and no matching case is found', async () => {
+    const error500 = {
+      response: { status: 500, data: { error: 'An unexpected error occurred.' } },
+    };
+    mockAxiosInstance.post.mockRejectedValue(error500);
+    mockAxiosInstance.get
+      .mockResolvedValueOnce({ data: { suite_id: 7 } })
+      .mockResolvedValueOnce({ data: { project_id: 3 } })
+      .mockResolvedValueOnce({ data: { cases: [] } }); // no match
+
+    await expect(
+      client.cases.addCase(5, { title: 'Multi-select case', custom_platform: [4] }),
+    ).rejects.toThrow();
+  });
+
+  it('recovers the updated case when updateCase gets a spurious 500', async () => {
+    const updatedCase = { id: 9, title: 'Updated', custom_platform: [1, 4] };
+    const error500 = {
+      response: { status: 500, data: { error: 'An unexpected error occurred.' } },
+    };
+    mockAxiosInstance.post.mockRejectedValue(error500);
+    // recovery re-fetches the case by id (exact, no heuristic).
+    mockAxiosInstance.get.mockResolvedValueOnce({ data: updatedCase });
+
+    const result = await client.cases.updateCase(9, { custom_platform: [1, 4] });
+
+    expect(result).toEqual(updatedCase);
+    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_case/9');
+  });
+});

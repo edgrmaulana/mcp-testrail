@@ -10,7 +10,7 @@ import {
 	AddCaseData,
 	UpdateCaseData,
 } from "../../shared/schemas/cases.js";
-import { handleApiError } from "./utils.js";
+import { handleApiError, getErrorStatus } from "./utils.js";
 import {
 	GetTestCaseInput,
 	GetTestCasesInput,
@@ -107,21 +107,58 @@ export class CasesClient extends BaseTestRailClient {
 		sectionId: AddTestCaseInput["sectionId"],
 		data: AddCaseData,
 	): Promise<TestRailCase> {
-		try {
-			// Validate data with Zod schema
-			const validatedData = addCaseDataSchema.parse(data);
+		// Validate data with Zod schema
+		const validatedData = addCaseDataSchema.parse(data);
 
+		try {
 			const response: AxiosResponse<TestRailCase> = await this.client.post(
 				`/api/v2/add_case/${sectionId}`,
 				validatedData,
 			);
 			return response.data;
 		} catch (error) {
+			// TestRail returns HTTP 500 when a required multi-select custom field
+			// (type 12) is set, but the case IS created server-side. Recover by
+			// locating the created case instead of reporting a false failure.
+			// ponytail: title + newest-id match; picks wrong case only if another
+			// case with the exact same title already exists in the section.
+			if (getErrorStatus(error) === 500 && validatedData.title) {
+				const recovered = await this.findCreatedCase(
+					sectionId,
+					validatedData.title,
+				).catch(() => null);
+				if (recovered) return recovered;
+			}
 			throw handleApiError(
 				error,
 				`Failed to add test case to section ${sectionId}`,
 			);
 		}
+	}
+
+	/**
+	 * Finds a case in a section by title, returning the newest match (highest id).
+	 * Used to recover the record created by an add_case that returned a spurious 500.
+	 */
+	private async findCreatedCase(
+		sectionId: number,
+		title: string,
+	): Promise<TestRailCase | null> {
+		const section: AxiosResponse<{ suite_id: number }> = await this.client.get(
+			`/api/v2/get_section/${sectionId}`,
+		);
+		const suiteId = section.data.suite_id;
+		const suite: AxiosResponse<{ project_id: number }> = await this.client.get(
+			`/api/v2/get_suite/${suiteId}`,
+		);
+		const projectId = suite.data.project_id;
+		const res: AxiosResponse<{ cases: TestRailCase[] }> = await this.client.get(
+			`/api/v2/get_cases/${projectId}`,
+			{ params: { suite_id: suiteId, section_id: sectionId, limit: 250 } },
+		);
+		const matches = res.data.cases.filter((c) => c.title === title);
+		if (matches.length === 0) return null;
+		return matches.reduce((a, b) => (b.id > a.id ? b : a));
 	}
 
 	/**
@@ -134,16 +171,22 @@ export class CasesClient extends BaseTestRailClient {
 		caseId: UpdateTestCaseInput["caseId"],
 		data: UpdateCaseData,
 	): Promise<TestRailCase> {
-		try {
-			// Validate data with Zod schema
-			const validatedData = updateCaseDataSchema.parse(data);
+		// Validate data with Zod schema
+		const validatedData = updateCaseDataSchema.parse(data);
 
+		try {
 			const response: AxiosResponse<TestRailCase> = await this.client.post(
 				`/api/v2/update_case/${caseId}`,
 				validatedData,
 			);
 			return response.data;
 		} catch (error) {
+			// Same TestRail 500-on-multiselect quirk; the update is applied
+			// server-side. We hold caseId, so recovery is exact: re-fetch the case.
+			if (getErrorStatus(error) === 500) {
+				const recovered = await this.getCase(caseId).catch(() => null);
+				if (recovered) return recovered;
+			}
 			throw handleApiError(error, `Failed to update test case ${caseId}`);
 		}
 	}
