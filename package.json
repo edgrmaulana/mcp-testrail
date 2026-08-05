@@ -1,12 +1,12 @@
 {
-  "name": "@bun913/mcp-testrail",
-  "author": "bun913",
-  "homepage": "https://github.com/bun913/mcp-testrail",
+  "name": "@edgrmaulana/mcp-testrail",
+  "author": "edgrmaulana",
+  "homepage": "https://github.com/edgrmaulana/mcp-testrail",
   "private": false,
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.19.9",
+  "version": "0.21.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -46,7 +46,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bun913/mcp-testrail.git"
+    "url": "git+https://github.com/edgrmaulana/mcp-testrail.git"
   },
   "license": "MIT"
 }
