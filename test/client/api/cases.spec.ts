@@ -355,10 +355,10 @@ describe('Cases API', () => {
     const caseIds = [1, 2, 3];
     
     // Test method
-    await client.cases.updateCases(1, 1, caseData, caseIds);  // projectId: 1, suiteId: 1
+    await client.cases.updateCases(1, 900, caseData, caseIds);  // projectId: 1, suiteId: 900
     
     // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/update_cases/1?suite_id=1', {
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/update_cases/900', {
       ...caseData,
       case_ids: caseIds
     });
@@ -372,10 +372,11 @@ describe('Cases API', () => {
     const caseIds = [1, 2, 3];
     
     // Test method
-    await client.cases.deleteCases(1, 1, caseIds);  // projectId: 1, suiteId: 1
+    await client.cases.deleteCases(1, 900, caseIds);  // projectId: 1, suiteId: 900
     
     // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/delete_cases/1?suite_id=1', {
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/delete_cases/900', {
+      project_id: 1,
       case_ids: caseIds
     });
   });
@@ -521,10 +522,10 @@ describe('Cases API', () => {
     const caseIds = [1, 2, 3];
     
     // Test method
-    await client.cases.updateCases(1, 1, caseData, caseIds);  // projectId: 1, suiteId: 1
+    await client.cases.updateCases(1, 900, caseData, caseIds);  // projectId: 1, suiteId: 900
     
     // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/update_cases/1?suite_id=1', {
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/update_cases/900', {
       ...caseData,
       case_ids: caseIds
     });
