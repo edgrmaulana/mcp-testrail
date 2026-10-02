@@ -31,18 +31,13 @@ export function registerPlanTools(
 						plans,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching test plans for project ${projectId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -68,18 +63,13 @@ export function registerPlanTools(
 						plan,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error creating test plan in project ${args.projectId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -110,18 +100,13 @@ export function registerPlanTools(
 						entry,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error adding plan entry to plan ${args.planId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -154,18 +139,13 @@ export function registerPlanTools(
 						run,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error adding run to plan entry ${args.entryId} in plan ${args.planId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);

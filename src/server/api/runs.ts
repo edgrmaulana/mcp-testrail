@@ -43,18 +43,13 @@ export function registerRunTools(
 						runs,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching test runs for project ${projectId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -73,18 +68,13 @@ export function registerRunTools(
 						run,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching test run ${runId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -126,18 +116,13 @@ export function registerRunTools(
 						run,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error creating test run for project ${projectId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -175,18 +160,13 @@ export function registerRunTools(
 						run,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error updating test run ${runId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);

@@ -35,18 +35,13 @@ export function registerResultTools(
 						results,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching results for test ${testId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -69,18 +64,13 @@ export function registerResultTools(
 						results,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching results for run ${runId} and case ${caseId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -102,18 +92,13 @@ export function registerResultTools(
 						results,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching results for run ${runId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -169,18 +154,13 @@ export function registerResultTools(
 						result,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error adding result for run ${runId} and case ${caseId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -243,18 +223,13 @@ export function registerResultTools(
 						results: addedResults,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error adding results for run ${runId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
