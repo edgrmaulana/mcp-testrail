@@ -21,6 +21,10 @@ describe("endpoint URIs", () => {
 			put: vi.fn().mockResolvedValue({ data: {} }),
 			delete: vi.fn().mockResolvedValue({ data: {} }),
 			defaults: { headers: { common: {} } },
+			interceptors: {
+				request: { use: vi.fn() },
+				response: { use: vi.fn() },
+			},
 			// biome-ignore lint/suspicious/noExplicitAny: partial axios instance
 		} as any);
 
