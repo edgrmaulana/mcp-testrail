@@ -33,7 +33,8 @@ You can connect this MCP server by setting like the below. This method uses `npx
       "env": {
         "TESTRAIL_URL": "https://your-instance.testrail.io", // Replace with your TestRail URL
         "TESTRAIL_USERNAME": "your-email@example.com", // Replace with your TestRail username
-        "TESTRAIL_API_KEY": "YOUR_API_KEY" // Replace with your TestRail API key
+        "TESTRAIL_API_KEY": "YOUR_API_KEY", // Replace with your TestRail API key
+        "TESTRAIL_MAX_RETRIES": "3" // Optional: 429 retries, defaults to 3, 0 disables
       }
     }
   }
