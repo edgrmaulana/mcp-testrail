@@ -307,8 +307,9 @@ export class CasesClient extends BaseTestRailClient {
 
 	/**
 	 * Updates multiple test cases at once
-	 * @param projectId The ID of the project
-	 * @param suiteId Optional ID of the test suite
+	 * @param projectId The ID of the project (not used in the URL; TestRail
+	 * takes the suite id in the path for this endpoint)
+	 * @param suiteId The ID of the test suite, used as the path parameter
 	 * @param data Data to update on the test cases
 	 * @param caseIds Array of test case IDs to update
 	 */
@@ -322,7 +323,10 @@ export class CasesClient extends BaseTestRailClient {
 			// Validate data with Zod schema
 			const validatedData = updateCaseDataSchema.parse(data);
 
-			const endpoint = `/api/v2/update_cases/${projectId}?suite_id=${suiteId}`;
+			// TestRail takes the suite id in the path here, not the project id, and
+			// its route lives inside the query string (index.php?/api/v2/...), so a
+			// second "?" would corrupt the URI. Extra params join with "&".
+			const endpoint = `/api/v2/update_cases/${suiteId}`;
 			await this.client.post(endpoint, { ...validatedData, case_ids: caseIds });
 		} catch (error) {
 			throw handleApiError(error, "Failed to update test cases");
@@ -331,8 +335,8 @@ export class CasesClient extends BaseTestRailClient {
 
 	/**
 	 * Deletes multiple test cases at once
-	 * @param projectId The ID of the project
-	 * @param suiteId Optional ID of the test suite
+	 * @param projectId The ID of the project, sent in the body as project_id
+	 * @param suiteId The ID of the test suite, used as the path parameter
 	 * @param caseIds Array of test case IDs to delete
 	 */
 	async deleteCases(
@@ -341,8 +345,13 @@ export class CasesClient extends BaseTestRailClient {
 		caseIds: DeleteTestCaseInput["caseId"][],
 	): Promise<void> {
 		try {
-			const endpoint = `/api/v2/delete_cases/${projectId}?suite_id=${suiteId}`;
-			await this.client.post(endpoint, { case_ids: caseIds });
+			// Suite id in the path, same as update_cases, but delete_cases also
+			// requires project_id in the body.
+			const endpoint = `/api/v2/delete_cases/${suiteId}`;
+			await this.client.post(endpoint, {
+				project_id: projectId,
+				case_ids: caseIds,
+			});
 		} catch (error) {
 			throw handleApiError(error, "Failed to delete test cases");
 		}

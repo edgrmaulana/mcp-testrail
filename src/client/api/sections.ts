@@ -150,11 +150,16 @@ export class SectionsClient extends BaseTestRailClient {
 		soft?: DeleteSectionInputType["soft"],
 	): Promise<void> {
 		try {
-			const url = soft
-				? `/api/v2/delete_section/${sectionId}?soft=1`
-				: `/api/v2/delete_section/${sectionId}`;
+			// Let axios append the parameter. TestRail's route lives inside the
+			// query string (index.php?/api/v2/...), so a hand-written "?" corrupts
+			// the URI; axios picks "&" or "?" to match the configured baseURL.
+			const url = `/api/v2/delete_section/${sectionId}`;
 
-			await this.client.post(url, {});
+			await this.client.post(
+				url,
+				{},
+				soft ? { params: { soft: 1 } } : undefined,
+			);
 		} catch (error) {
 			throw handleApiError(error, `Failed to delete section ${sectionId}`);
 		}

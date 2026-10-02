@@ -207,7 +207,7 @@ describe('Sections API', () => {
     await client.sections.deleteSection(1);
     
     // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/delete_section/1', {});
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/delete_section/1', {}, undefined);
   });
   
   it('deletes a section with soft parameter', async () => {
@@ -218,6 +218,6 @@ describe('Sections API', () => {
     await client.sections.deleteSection(1, true);
     
     // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/delete_section/1?soft=1', {});
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/delete_section/1', {}, { params: { soft: 1 } });
   });
 }); 
