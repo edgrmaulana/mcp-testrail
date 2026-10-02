@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { TestRailClient } from "../../client/api/index.js";
-import { createSuccessResponse, createErrorResponse } from "./utils.js";
+import {
+	createSuccessResponse,
+	createErrorResponse,
+	createPagination,
+} from "./utils.js";
 import {
 	getTestCaseSchema,
 	getTestCasesSchema,
@@ -74,18 +78,13 @@ export function registerCaseTools(
 						case: testCase,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching test case ${args.caseId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -93,7 +92,7 @@ export function registerCaseTools(
 	// Get all test cases for a project
 	server.tool(
 		"getCases",
-		"Retrieves test cases list with basic fields only (excludes steps/expected results for performance). REQUIRED: projectId, suiteId. OPTIONAL: createdBy, filter, limit (default 50), milestoneId, offset (default 0), priorityId, refs, sectionId, templateId, typeId, updatedBy, labelId. Use getCase for full details.",
+		"Retrieves test cases list with basic fields only (excludes steps/expected results for performance). REQUIRED: projectId, suiteId. OPTIONAL: createdBy, filter, limit (default 50), milestoneId, offset (default 0), priorityId, refs, sectionId, templateId, typeId, updatedBy, labelId. Use getCase for full details. Returns pagination: {limit, offset, count, hasMore}; repeat the call with offset advanced by limit while hasMore is true.",
 		{
 			projectId: getTestCasesSchema.shape.projectId,
 			suiteId: getTestCasesSchema.shape.suiteId,
@@ -175,26 +174,16 @@ export function registerCaseTools(
 					"Test cases retrieved successfully",
 					{
 						cases: responseData,
-						pagination: {
-							limit,
-							offset,
-							total: testCases.size,
-							hasMore: testCases._links.next !== null,
-						},
+						pagination: createPagination(testCases),
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching test cases for project ${args.projectId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -309,18 +298,13 @@ export function registerCaseTools(
 						case: testCase,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error creating test case in section ${args.sectionId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -427,18 +411,13 @@ export function registerCaseTools(
 						case: testCase,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error updating test case ${args.caseId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -455,18 +434,13 @@ export function registerCaseTools(
 				const successResponse = createSuccessResponse(
 					`Test case ${caseId} deleted successfully`,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error deleting test case ${args.caseId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -485,18 +459,13 @@ export function registerCaseTools(
 						caseTypes,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					"Error fetching test case types",
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -515,18 +484,13 @@ export function registerCaseTools(
 						caseFields,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					"Error fetching test case fields",
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -552,18 +516,13 @@ export function registerCaseTools(
 						result,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error copying test cases to section ${args.sectionId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -589,18 +548,13 @@ export function registerCaseTools(
 						result,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error moving test cases to section ${args.sectionId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -620,18 +574,13 @@ export function registerCaseTools(
 						history,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching history for test case ${args.caseId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -753,18 +702,13 @@ export function registerCaseTools(
 				const successResponse = createSuccessResponse(
 					"Test cases updated successfully",
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error updating test cases for project ${args.projectId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -788,18 +732,13 @@ export function registerCaseTools(
 					"BDD scenario imported successfully",
 					{ case: result },
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error importing BDD scenario to section ${args.sectionId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -819,18 +758,13 @@ export function registerCaseTools(
 					"BDD scenario exported successfully",
 					{ featureContent: result },
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error exporting BDD scenario for case ${args.caseId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);

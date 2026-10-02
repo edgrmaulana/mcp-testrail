@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { TestRailClient } from "../../client/api/index.js";
-import { createSuccessResponse, createErrorResponse } from "./utils.js";
+import {
+	createSuccessResponse,
+	createErrorResponse,
+	createPagination,
+} from "./utils.js";
 import { getTestsSchema, getTestSchema } from "../../shared/schemas/tests.js";
 import { z } from "zod";
 
@@ -16,7 +20,7 @@ export function registerTestTools(
 	// Get a specific test case
 	server.tool(
 		"getTests",
-		"Retrieves a list of tests for a test run",
+		"Retrieves a list of tests for a test run. REQUIRED: runId. OPTIONAL: limit (default 50), offset (default 0). Returns pagination: {limit, offset, count, hasMore}; repeat the call with offset advanced by limit while hasMore is true.",
 		{
 			runId: getTestsSchema.shape.runId,
 			limit: z
@@ -35,28 +39,26 @@ export function registerTestTools(
 		},
 		async (args, extra) => {
 			try {
-				const { runId } = args;
-				const tests = await testRailClient.tests.getTests(runId);
+				const { runId, limit, offset } = args;
+				const tests = await testRailClient.tests.getTests(runId, {
+					limit,
+					offset,
+				});
 
-				// Return full case data for individual case requests
 				const successResponse = createSuccessResponse(
 					"Tests retrieved successfully",
 					{
-						tests: tests,
+						tests: tests.tests,
+						pagination: createPagination(tests),
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching tests ${args.runId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
@@ -80,18 +82,13 @@ export function registerTestTools(
 						test: test,
 					},
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(successResponse) }],
-				};
+				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error fetching test ${args.testId}`,
 					error,
 				);
-				return {
-					content: [{ type: "text", text: JSON.stringify(errorResponse) }],
-					isError: true,
-				};
+				return errorResponse;
 			}
 		},
 	);
