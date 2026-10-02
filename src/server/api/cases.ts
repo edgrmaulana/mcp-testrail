@@ -18,10 +18,90 @@ import {
 	getTestCaseHistorySchema,
 	updateTestCasesSchema,
 	TestRailCase,
-	TestRailCaseSchema,
 	addBddSchema,
 	getBddSchema,
 } from "../../shared/schemas/cases.js";
+
+type ColumnName = keyof TestRailCase;
+
+// Default columns that exclude large text fields
+const defaultColumns: ColumnName[] = [
+	"id",
+	"title",
+	"section_id",
+	"template_id",
+	"type_id",
+	"priority_id",
+	"milestone_id",
+	"refs",
+	"estimate",
+	"suite_id",
+	"display_order",
+	"is_deleted",
+	"status_id",
+	"updated_on",
+	"created_on",
+	"created_by",
+	"updated_by",
+];
+
+// Custom fields that always hold a body, so they never belong in a list
+// response. Use getCase for these.
+const excludedCustomColumns = new Set([
+	"custom_preconds",
+	"custom_steps",
+	"custom_expected",
+	"custom_steps_separated",
+	// Written by this server's own addBdd tool: a whole .feature file.
+	"custom_testrail_bdd_scenario",
+]);
+
+// A project can name a "Text" custom field anything, so length is the only
+// portable way to spot one. TestRail's "String" type caps at 250 characters,
+// so any real scalar survives this untouched.
+//
+// ponytail: length check, not field types. Deriving them would mean a
+// getCaseFields call per getCases, against a 180/minute rate limit. Switch to
+// that if truncation ever hides something a caller needed.
+const CUSTOM_TEXT_LIMIT = 250;
+const TRUNCATION_NOTE = "...[truncated, use getCase for the full value]";
+
+/**
+ * Reduces a test case to the fields worth returning in a list response:
+ * the default columns plus any project-defined custom field. Custom field
+ * names vary per project and cannot be read off TestRailCaseSchema, so they
+ * are taken from the response itself. Long text values are truncated rather
+ * than dropped, because an absent key cannot be told apart from an unset
+ * required field, which is what callers read these in bulk to audit.
+ * @param testCase A test case as returned by TestRail
+ * @returns The case with bodies reduced and unknown non-custom fields dropped
+ */
+export function filterCaseColumns(
+	testCase: Record<string, unknown>,
+): Record<string, unknown> {
+	// Always include id
+	const filtered: Record<string, unknown> = { id: testCase.id };
+
+	for (const column of defaultColumns) {
+		if (column in testCase && column !== "id") {
+			filtered[column] = testCase[column];
+		}
+	}
+
+	for (const key of Object.keys(testCase)) {
+		if (!key.startsWith("custom_") || excludedCustomColumns.has(key)) {
+			continue;
+		}
+
+		const value = testCase[key];
+		filtered[key] =
+			typeof value === "string" && value.length > CUSTOM_TEXT_LIMIT
+				? `${value.slice(0, CUSTOM_TEXT_LIMIT)}${TRUNCATION_NOTE}`
+				: value;
+	}
+
+	return filtered;
+}
 
 /**
  * Function to register test case-related API tools
@@ -32,33 +112,6 @@ export function registerCaseTools(
 	server: McpServer,
 	testRailClient: TestRailClient,
 ): void {
-	// Extract column names from TestRailCase type
-	type ColumnName = keyof TestRailCase;
-	const availableColumns = Object.keys(
-		TestRailCaseSchema.shape,
-	) as ColumnName[];
-
-	// Default columns that exclude large text fields
-	const defaultColumns: ColumnName[] = [
-		"id",
-		"title",
-		"section_id",
-		"template_id",
-		"type_id",
-		"priority_id",
-		"milestone_id",
-		"refs",
-		"estimate",
-		"suite_id",
-		"display_order",
-		"is_deleted",
-		"status_id",
-		"updated_on",
-		"created_on",
-		"created_by",
-		"updated_by",
-	];
-
 	// Get a specific test case
 	server.tool(
 		"getCase",
@@ -92,7 +145,7 @@ export function registerCaseTools(
 	// Get all test cases for a project
 	server.tool(
 		"getCases",
-		"Retrieves test cases list with basic fields only (excludes steps/expected results for performance). REQUIRED: projectId, suiteId. OPTIONAL: createdBy, filter, limit (default 50), milestoneId, offset (default 0), priorityId, refs, sectionId, templateId, typeId, updatedBy, labelId. Use getCase for full details. Returns pagination: {limit, offset, count, hasMore}; repeat the call with offset advanced by limit while hasMore is true.",
+		"Retrieves test cases list including the project's custom fields (preconditions, steps, expected results and BDD scenarios are excluded, and custom text values over 250 characters are truncated, for performance). REQUIRED: projectId, suiteId. OPTIONAL: createdBy, filter, limit (default 50), milestoneId, offset (default 0), priorityId, refs, sectionId, templateId, typeId, updatedBy, labelId. Use getCase for full details. Returns pagination: {limit, offset, count, hasMore}; repeat the call with offset advanced by limit while hasMore is true.",
 		{
 			projectId: getTestCasesSchema.shape.projectId,
 			suiteId: getTestCasesSchema.shape.suiteId,
@@ -150,25 +203,10 @@ export function registerCaseTools(
 					params,
 				);
 
-				// Always filter to default columns to reduce response size
-				const responseData = testCases.cases.map((testCase) => {
-					// Always include id
-					const filtered: Partial<TestRailCase> = {
-						id: testCase.id,
-					};
-
-					// Add only the default columns
-					for (const column of defaultColumns) {
-						if (column in testCase && column !== "id") {
-							// Use type assertion more carefully
-							(filtered as Record<string, unknown>)[column] = (
-								testCase as Record<string, unknown>
-							)[column];
-						}
-					}
-
-					return filtered;
-				});
+				// Reduce the bodies to keep the response small
+				const responseData = testCases.cases.map((testCase) =>
+					filterCaseColumns(testCase as unknown as Record<string, unknown>),
+				);
 
 				const successResponse = createSuccessResponse(
 					"Test cases retrieved successfully",
