@@ -37,7 +37,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Update package version
-        run: npm version ${{ steps.semver.outputs.version }} --no-git-tag-version
+        run: npm version ${{ steps.semver.outputs.version }} --no-git-tag-version --allow-same-version
 
       - name: install
         run: npm ci
