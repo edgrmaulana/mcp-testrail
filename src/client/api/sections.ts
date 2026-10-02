@@ -143,23 +143,35 @@ export class SectionsClient extends BaseTestRailClient {
 	}
 
 	/**
-	 * Delete an existing section
+	 * Deletes a section, or reports what deleting it would affect.
+	 *
+	 * `soft` has to travel in the POST body. TestRail ignores it as a query
+	 * parameter and deletes the section for real, which is how a request for a
+	 * preview destroyed one. Verified against a live instance: body `{soft: 1}`
+	 * answers `{"cases": 0}` and leaves the section in place, while `&soft=1`
+	 * answers with an empty body and removes it.
+	 * @param sectionId The ID of the section
+	 * @param soft True to preview the deletion instead of performing it
+	 * @returns The affected-entity counts for a preview, or an empty object
 	 */
 	async deleteSection(
 		sectionId: DeleteSectionInputType["sectionId"],
 		soft?: DeleteSectionInputType["soft"],
-	): Promise<void> {
+	): Promise<Record<string, unknown>> {
 		try {
-			// Let axios append the parameter. TestRail's route lives inside the
-			// query string (index.php?/api/v2/...), so a hand-written "?" corrupts
-			// the URI; axios picks "&" or "?" to match the configured baseURL.
 			const url = `/api/v2/delete_section/${sectionId}`;
 
-			await this.client.post(
-				url,
-				{},
-				soft ? { params: { soft: 1 } } : undefined,
-			);
+			const response = await this.client.post(url, soft ? { soft: 1 } : {});
+
+			// A real deletion answers with an empty body, which axios hands back as
+			// "", and anything unparseable (a login or maintenance page served with
+			// a 200) arrives as its raw string. Both have to normalize to {} or the
+			// caller cannot tell a dry-run payload from no payload: Object.keys()
+			// on an HTML string counts its characters.
+			const data: unknown = response.data;
+			return typeof data === "object" && data !== null && !Array.isArray(data)
+				? (data as Record<string, unknown>)
+				: {};
 		} catch (error) {
 			throw handleApiError(error, `Failed to delete section ${sectionId}`);
 		}

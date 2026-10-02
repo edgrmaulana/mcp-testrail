@@ -3,7 +3,48 @@
 Notable changes to `@edgrmaulana/mcp-testrail`. Releases before 0.23.0 are
 listed at [Releases](https://github.com/edgrmaulana/mcp-testrail/releases).
 
-## 0.23.0 (unreleased)
+## 0.23.1 (unreleased)
+
+### Fixed
+
+**`deleteSection` with `soft: true` destroyed the section instead of previewing
+it** ([#10](https://github.com/edgrmaulana/mcp-testrail/issues/10))
+
+TestRail reads `soft` from the POST body. 0.23.0 sent it as a query parameter,
+where TestRail ignores it and performs a real deletion — so a caller asking
+what a deletion *would* affect had the section and its test cases destroyed.
+That is worse than the behaviour 0.23.0 replaced, where the call failed and
+nothing was lost.
+
+Verified against a live instance:
+
+| sent | response | section |
+| --- | --- | --- |
+| `&soft=1` in the query (0.23.0) | empty | **destroyed** |
+| `{"soft": 1}` in the body (0.23.1) | `{"cases": 0}` | survives |
+| hard delete | empty | destroyed |
+
+A preview now reports what it is and carries TestRail's counts:
+
+```json
+{ "message": "Section 1089290 was previewed, not deleted", "affected": { "cases": 0 } }
+```
+
+If a preview was requested and TestRail answers without a dry-run payload, the
+tool now returns an error saying the section may have been deleted, rather than
+reporting success. Anything that is not a JSON object — an empty body, or a
+login or maintenance page served with a 200 — is treated as no payload.
+
+### Changed
+
+**`deleteSection` returns the response payload** instead of `void`. Breaking
+for direct consumers of the exported client; the MCP tool result is unaffected
+apart from the new `affected` field.
+
+The `deleteSection` tool description now states that the deletion is
+irreversible and cascades to the section's test cases, and what `soft` does.
+
+## 0.23.0 - 2026-10-02
 
 Four long-standing bugs in how the server talks to TestRail and to its own
 clients. Three of the fixes change the response shape, so read **Breaking
@@ -121,6 +162,10 @@ Both failed with `Invalid characters in URI`. TestRail's route lives inside the
 query string (`index.php?/api/v2/...`), so the hand-written `?` in these
 endpoints corrupted the route. Query parameters now go through axios, which
 picks `&` or `?` to match the configured base URL.
+
+For `deleteSection` this fixed the URI but not the behaviour: TestRail ignores
+`soft` as a query parameter and deletes the section for real. See 0.23.1 below
+— **do not use `soft: true` on 0.23.0.**
 
 `update_cases` and `delete_cases` also used the wrong path parameter — TestRail
 takes the suite id there, not the project id — and `delete_cases` now sends

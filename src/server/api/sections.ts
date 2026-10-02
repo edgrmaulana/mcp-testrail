@@ -13,6 +13,44 @@ import {
 	updateSectionSchema,
 	deleteSectionSchema,
 } from "../../shared/schemas/sections.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+
+/**
+ * Turns a delete_section response into the tool result.
+ *
+ * TestRail answers a preview with the affected-entity counts and a real
+ * deletion with an empty body, so an empty payload after asking for a preview
+ * means the section is gone. That must never be reported as a successful
+ * preview: a caller asking what would be destroyed has to hear that something
+ * was, not that nothing happened.
+ * @param sectionId The ID of the section
+ * @param soft Whether a preview was requested
+ * @param result The normalized response payload
+ * @returns The tool result to hand back
+ */
+export function describeSectionDeletion(
+	sectionId: number,
+	soft: boolean | undefined,
+	result: Record<string, unknown>,
+): CallToolResult {
+	if (!soft) {
+		return createSuccessResponse(`Section ${sectionId} deleted successfully`);
+	}
+
+	if (Object.keys(result).length === 0) {
+		return createErrorResponse(
+			`Section ${sectionId} was not previewed`,
+			new Error(
+				"TestRail returned no dry-run payload, which means the section may have been deleted. Verify with getSection before retrying.",
+			),
+		);
+	}
+
+	return createSuccessResponse(
+		`Section ${sectionId} was previewed, not deleted`,
+		{ affected: result },
+	);
+}
 
 /**
  * Function to register section-related API tools
@@ -188,15 +226,15 @@ export function registerSectionTools(
 	// Delete a section
 	server.tool(
 		"deleteSection",
-		"Deletes a section",
+		"Deletes a section and all of its test cases, which cannot be undone. REQUIRED: sectionId. OPTIONAL: soft - true previews the deletion instead of performing it, returning the number of affected cases without removing anything.",
 		deleteSectionSchema,
 		async ({ sectionId, soft }) => {
 			try {
-				await testRailClient.sections.deleteSection(sectionId, soft);
-				const successResponse = createSuccessResponse(
-					`Section ${sectionId} deleted successfully`,
+				const result = await testRailClient.sections.deleteSection(
+					sectionId,
+					soft,
 				);
-				return successResponse;
+				return describeSectionDeletion(sectionId, soft, result);
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error deleting section ${sectionId}`,
