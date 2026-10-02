@@ -24,6 +24,18 @@ const baseURL = url.endsWith("/index.php?/")
 		? `${url}index.php?/`
 		: `${url}/index.php?/`;
 
+// Optional: how many times a rate-limited (429) request is retried.
+const rawMaxRetries = process.env.TESTRAIL_MAX_RETRIES;
+let maxRetries: number | undefined;
+if (rawMaxRetries !== undefined && rawMaxRetries !== "") {
+	maxRetries = Number(rawMaxRetries);
+	if (!Number.isInteger(maxRetries) || maxRetries < 0) {
+		throw new Error(
+			`TESTRAIL_MAX_RETRIES must be a non-negative integer, got "${rawMaxRetries}"`,
+		);
+	}
+}
+
 // TestRail client configuration
 const testRailConfig: TestRailClientConfig = {
 	baseURL: baseURL,
@@ -31,6 +43,7 @@ const testRailConfig: TestRailClientConfig = {
 		username: process.env.TESTRAIL_USERNAME,
 		password: process.env.TESTRAIL_API_KEY,
 	},
+	maxRetries,
 };
 
 // Initialize TestRail client
