@@ -69,23 +69,21 @@ describe("endpoint URIs", () => {
 		});
 	});
 
-	it("passes the soft delete flag to axios rather than the URL", async () => {
+	it("sends the soft delete flag in the body, never as a query parameter", async () => {
+		// Verified against a live instance: as a query parameter TestRail
+		// ignores it and deletes the section for real.
 		await client.sections.deleteSection(74807, true);
 
-		expect(post).toHaveBeenCalledWith(
-			"/api/v2/delete_section/74807",
-			{},
-			{ params: { soft: 1 } },
-		);
+		expect(post).toHaveBeenCalledWith("/api/v2/delete_section/74807", {
+			soft: 1,
+		});
+		// No third argument, so no axios `params` can reach the URL.
+		expect(post.mock.calls[0].length).toBe(2);
 	});
 
-	it("sends no parameter at all for a hard delete", async () => {
+	it("sends no flag at all for a hard delete", async () => {
 		await client.sections.deleteSection(74807);
 
-		expect(post).toHaveBeenCalledWith(
-			"/api/v2/delete_section/74807",
-			{},
-			undefined,
-		);
+		expect(post).toHaveBeenCalledWith("/api/v2/delete_section/74807", {});
 	});
 });
