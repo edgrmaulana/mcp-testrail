@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { TestRailClient } from "../../client/api/index.js";
-import { createSuccessResponse, createErrorResponse } from "./utils.js";
+import {
+	createSuccessResponse,
+	createErrorResponse,
+	registerStrictTool,
+} from "./utils.js";
 import {
 	getPlansSchema,
 	addPlanSchema,
@@ -18,7 +22,8 @@ export function registerPlanTools(
 	testRailClient: TestRailClient,
 ): void {
 	// Get all test plans for a project
-	server.tool(
+	registerStrictTool(
+		server,
 		"getPlans",
 		"Retrieves all test plans for a specified TestRail project",
 		getPlansSchema,
@@ -43,7 +48,8 @@ export function registerPlanTools(
 	);
 
 	// Add a new test plan
-	server.tool(
+	registerStrictTool(
+		server,
 		"addPlan",
 		"Creates a new test plan in a TestRail project",
 		{
@@ -75,7 +81,8 @@ export function registerPlanTools(
 	);
 
 	// Add a plan entry
-	server.tool(
+	registerStrictTool(
+		server,
 		"addPlanEntry",
 		"Adds a new test plan entry to an existing test plan",
 		{
@@ -112,7 +119,8 @@ export function registerPlanTools(
 	);
 
 	// Add a run to plan entry
-	server.tool(
+	registerStrictTool(
+		server,
 		"addRunToPlanEntry",
 		"Adds a new test run to an existing plan entry",
 		{

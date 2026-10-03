@@ -4,6 +4,7 @@ import {
 	createSuccessResponse,
 	createErrorResponse,
 	createPagination,
+	registerStrictTool,
 } from "./utils.js";
 import { getTestsSchema, getTestSchema } from "../../shared/schemas/tests.js";
 import { z } from "zod";
@@ -18,7 +19,8 @@ export function registerTestTools(
 	testRailClient: TestRailClient,
 ): void {
 	// Get a specific test case
-	server.tool(
+	registerStrictTool(
+		server,
 		"getTests",
 		"Retrieves a list of tests for a test run. REQUIRED: runId. OPTIONAL: limit (default 50), offset (default 0). Returns pagination: {limit, offset, count, hasMore}; repeat the call with offset advanced by limit while hasMore is true.",
 		{
@@ -64,7 +66,8 @@ export function registerTestTools(
 	);
 
 	// Get a specific test case
-	server.tool(
+	registerStrictTool(
+		server,
 		"getTest",
 		"Retrieves complete details for a single test, including all fields such as status, type, and results",
 		{

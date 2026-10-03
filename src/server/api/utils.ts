@@ -1,4 +1,6 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z, type ZodRawShape, type ZodObject } from "zod";
 
 // Function to format error messages
 export function formatErrorMessage(error: unknown): string {
@@ -75,4 +77,28 @@ export function createPagination(result: {
 			? Boolean(result._links.next)
 			: result.size >= result.limit,
 	};
+}
+
+// Every tool advertises `additionalProperties: false`, but a tool registered
+// from a plain shape silently strips unknown keys instead of refusing them, so
+// a misspelled parameter is dropped and the call still reports success. A
+// strict schema refuses it and names the key. McpServer.tool() only takes a
+// raw shape, which cannot carry strictness, so registration goes through
+// registerTool - which is what the SDK now recommends anyway, as tool() is
+// deprecated.
+export function registerStrictTool<Shape extends ZodRawShape>(
+	server: McpServer,
+	name: string,
+	description: string,
+	shape: Shape,
+	handler: (
+		args: z.infer<ZodObject<Shape, "strict">>,
+		extra: unknown,
+	) => Promise<CallToolResult>,
+): void {
+	server.registerTool(
+		name,
+		{ description, inputSchema: z.object(shape).strict() },
+		handler as never,
+	);
 }

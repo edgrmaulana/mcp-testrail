@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { TestRailClient } from "../../client/api/index.js";
-import { createSuccessResponse, createErrorResponse } from "./utils.js";
+import {
+	createSuccessResponse,
+	createErrorResponse,
+	registerStrictTool,
+} from "./utils.js";
 import { getMilestonesSchema } from "../../shared/schemas/milestones.js";
 
 /**
@@ -13,7 +17,8 @@ export function registerMilestoneTools(
 	testRailClient: TestRailClient,
 ): void {
 	// Get all milestones for a project
-	server.tool(
+	registerStrictTool(
+		server,
 		"getMilestones",
 		"Retrieves all milestones for a specified TestRail project",
 		getMilestonesSchema,

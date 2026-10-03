@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { TestRailClient } from "../../client/api/index.js";
-import { createSuccessResponse, createErrorResponse } from "./utils.js";
+import {
+	createSuccessResponse,
+	createErrorResponse,
+	registerStrictTool,
+} from "./utils.js";
 import {
 	getRunsSchema,
 	getRunSchema,
@@ -18,7 +22,8 @@ export function registerRunTools(
 	testRailClient: TestRailClient,
 ): void {
 	// Get all test runs for a project
-	server.tool(
+	registerStrictTool(
+		server,
 		"getRuns",
 		"Retrieves all test runs for a specified TestRail project",
 		getRunsSchema,
@@ -55,7 +60,8 @@ export function registerRunTools(
 	);
 
 	// Get a specific test run
-	server.tool(
+	registerStrictTool(
+		server,
 		"getRun",
 		"Retrieves details of a specific test run by ID",
 		getRunSchema,
@@ -80,7 +86,8 @@ export function registerRunTools(
 	);
 
 	// Create a new test run
-	server.tool(
+	registerStrictTool(
+		server,
 		"addRun",
 		"Creates a new test run in a TestRail project",
 		addRunSchema,
@@ -128,7 +135,8 @@ export function registerRunTools(
 	);
 
 	// Update an existing test run
-	server.tool(
+	registerStrictTool(
+		server,
 		"updateRun",
 		"Updates an existing test run",
 		updateRunSchema,

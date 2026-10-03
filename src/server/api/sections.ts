@@ -4,6 +4,7 @@ import {
 	createSuccessResponse,
 	createErrorResponse,
 	createPagination,
+	registerStrictTool,
 } from "./utils.js";
 import {
 	getSectionSchema,
@@ -62,7 +63,8 @@ export function registerSectionTools(
 	testRailClient: TestRailClient,
 ): void {
 	// Get a specific section
-	server.tool(
+	registerStrictTool(
+		server,
 		"getSection",
 		"Retrieves details of a specific section by ID",
 		getSectionSchema,
@@ -87,7 +89,8 @@ export function registerSectionTools(
 	);
 
 	// Get sections for a project or suite with pagination
-	server.tool(
+	registerStrictTool(
+		server,
 		"getSections",
 		"Retrieves sections for a specified project and suite. Supports pagination via limit and offset parameters (default: limit=250, offset=0). Use pagination.hasMore to determine if more pages are available.",
 		getSectionsSchema,
@@ -121,7 +124,8 @@ export function registerSectionTools(
 	);
 
 	// Create a new section
-	server.tool(
+	registerStrictTool(
+		server,
 		"addSection",
 		"Creates a new section in a TestRail project",
 		addSectionSchema,
@@ -156,7 +160,8 @@ export function registerSectionTools(
 	);
 
 	// Move a section
-	server.tool(
+	registerStrictTool(
+		server,
 		"moveSection",
 		"Moves a section to a new position in the test hierarchy",
 		moveSectionSchema,
@@ -192,7 +197,8 @@ export function registerSectionTools(
 	);
 
 	// Update a section
-	server.tool(
+	registerStrictTool(
+		server,
 		"updateSection",
 		"Updates an existing section",
 		updateSectionSchema,
@@ -224,7 +230,8 @@ export function registerSectionTools(
 	);
 
 	// Delete a section
-	server.tool(
+	registerStrictTool(
+		server,
 		"deleteSection",
 		"Deletes a section and all of its test cases, which cannot be undone. REQUIRED: sectionId. OPTIONAL: soft - true previews the deletion instead of performing it, returning the number of affected cases without removing anything.",
 		deleteSectionSchema,

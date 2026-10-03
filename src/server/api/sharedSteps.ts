@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { TestRailClient } from "../../client/api/index.js";
-import { createSuccessResponse, createErrorResponse } from "./utils.js";
+import {
+	createSuccessResponse,
+	createErrorResponse,
+	registerStrictTool,
+} from "./utils.js";
 import { getSharedStepsSchema } from "../../shared/schemas/sharedSteps.js";
 
 /**
@@ -12,7 +16,8 @@ export function registerSharedStepTools(
 	server: McpServer,
 	testRailClient: TestRailClient,
 ): void {
-	server.tool(
+	registerStrictTool(
+		server,
 		"getSharedSteps",
 		"Retrieves all shared steps for a specified TestRail project",
 		getSharedStepsSchema,

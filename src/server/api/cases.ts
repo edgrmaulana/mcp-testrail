@@ -4,6 +4,7 @@ import {
 	createSuccessResponse,
 	createErrorResponse,
 	createPagination,
+	registerStrictTool,
 } from "./utils.js";
 import {
 	getTestCaseSchema,
@@ -113,7 +114,8 @@ export function registerCaseTools(
 	testRailClient: TestRailClient,
 ): void {
 	// Get a specific test case
-	server.tool(
+	registerStrictTool(
+		server,
 		"getCase",
 		"Retrieves complete details for a single test case including steps, expected results, and prerequisites. REQUIRED: caseId.",
 		{
@@ -143,7 +145,8 @@ export function registerCaseTools(
 	);
 
 	// Get all test cases for a project
-	server.tool(
+	registerStrictTool(
+		server,
 		"getCases",
 		"Retrieves test cases list including the project's custom fields (preconditions, steps, expected results and BDD scenarios are excluded, and custom text values over 250 characters are truncated, for performance). REQUIRED: projectId, suiteId. OPTIONAL: createdBy, filter, limit (default 50), milestoneId, offset (default 0), priorityId, refs, sectionId, templateId, typeId, updatedBy, labelId. Use getCase for full details. Returns pagination: {limit, offset, count, hasMore}; repeat the call with offset advanced by limit while hasMore is true.",
 		{
@@ -227,7 +230,8 @@ export function registerCaseTools(
 	);
 
 	// Add a new test case
-	server.tool(
+	registerStrictTool(
+		server,
 		"addCase",
 		"Creates a new test case in TestRail. REQUIRED: sectionId, title. OPTIONAL: typeId, priorityId, templateId, customSteps, customExpected, customStepsSeparated, customFields, etc. Use getCaseTypes to find valid typeId values. NOTE: templateId=2 is required to use customStepsSeparated (array of step objects with 'content' and 'expected' fields). For simple text steps, use customSteps and customExpected instead. Use customFields for any additional custom fields (e.g., {custom_case_security_score: 'high'}).",
 		{
@@ -348,7 +352,8 @@ export function registerCaseTools(
 	);
 
 	// Update an existing test case
-	server.tool(
+	registerStrictTool(
+		server,
 		"updateCase",
 		"Updates an existing test case. REQUIRED: caseId. OPTIONAL: title, typeId, priorityId, templateId, customSteps, customExpected, customStepsSeparated, customFields, etc. Only specified fields will be updated. NOTE: templateId=2 is required to use customStepsSeparated (array of step objects with 'content' and 'expected' fields). For simple text steps, use customSteps and customExpected instead. Use customFields for any additional custom fields (e.g., {custom_case_security_score: 'high'}).",
 		{
@@ -461,7 +466,8 @@ export function registerCaseTools(
 	);
 
 	// Delete a test case
-	server.tool(
+	registerStrictTool(
+		server,
 		"deleteCase",
 		"Deletes a test case from TestRail",
 		{ caseId: deleteTestCaseSchema.shape.caseId },
@@ -484,7 +490,8 @@ export function registerCaseTools(
 	);
 
 	// Get all test case types
-	server.tool(
+	registerStrictTool(
+		server,
 		"getCaseTypes",
 		"Retrieves all available test case types in TestRail",
 		{},
@@ -509,7 +516,8 @@ export function registerCaseTools(
 	);
 
 	// Get all test case fields
-	server.tool(
+	registerStrictTool(
+		server,
 		"getCaseFields",
 		"Retrieves all available test case fields in TestRail",
 		{},
@@ -534,7 +542,8 @@ export function registerCaseTools(
 	);
 
 	// Copy test cases to section
-	server.tool(
+	registerStrictTool(
+		server,
 		"copyToSection",
 		"Copies specified test cases to a target section while keeping the originals",
 		{
@@ -566,7 +575,8 @@ export function registerCaseTools(
 	);
 
 	// Move test cases to section
-	server.tool(
+	registerStrictTool(
+		server,
 		"moveToSection",
 		"Moves specified test cases to a target section",
 		{
@@ -598,7 +608,8 @@ export function registerCaseTools(
 	);
 
 	// Get test case history
-	server.tool(
+	registerStrictTool(
+		server,
 		"getCaseHistory",
 		"Retrieves the change history of a test case including updates to fields and custom fields",
 		{ caseId: getTestCaseHistorySchema.shape.caseId },
@@ -624,7 +635,8 @@ export function registerCaseTools(
 	);
 
 	// Update multiple test cases
-	server.tool(
+	registerStrictTool(
+		server,
 		"updateCases",
 		"Updates multiple test cases simultaneously with the same field values. NOTE: templateId=2 is required to use customStepsSeparated (array of step objects with 'content' and 'expected' fields). For simple text steps, use customSteps and customExpected instead. Use customFields for any additional custom fields (e.g., {custom_case_security_score: 'high'}).",
 		{
@@ -752,7 +764,8 @@ export function registerCaseTools(
 	);
 
 	// Import a BDD .feature file into a section
-	server.tool(
+	registerStrictTool(
+		server,
 		"addBdd",
 		"Imports/uploads a .feature file (Gherkin BDD scenario) into a TestRail section. Creates a new test case with BDD template (template_id=4) and populates the custom_testrail_bdd_scenario field. REQUIRED: sectionId, featureContent (raw Gherkin text including Feature:, Scenario:, Given/When/Then).",
 		{
@@ -782,7 +795,8 @@ export function registerCaseTools(
 	);
 
 	// Export a BDD test case as .feature file
-	server.tool(
+	registerStrictTool(
+		server,
 		"getBdd",
 		"Exports a BDD test case as a .feature file in Gherkin format. REQUIRED: caseId.",
 		{
