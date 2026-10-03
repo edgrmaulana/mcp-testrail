@@ -14,16 +14,18 @@ export const addPlanSchema = z.object({
 	milestoneId: z.number().optional().describe("Milestone ID"),
 	entries: z
 		.array(
-			z.object({
-				suite_id: z.number(),
-				name: z.string().optional(),
-				description: z.string().optional(),
-				assignedto_id: z.number().optional(),
-				include_all: z.boolean().optional(),
-				case_ids: z.array(z.number()).optional(),
-				config_ids: z.array(z.number()).optional(),
-				runs: z.array(z.record(z.unknown())).optional(),
-			}),
+			z
+				.object({
+					suite_id: z.number(),
+					name: z.string().optional(),
+					description: z.string().optional(),
+					assignedto_id: z.number().optional(),
+					include_all: z.boolean().optional(),
+					case_ids: z.array(z.number()).optional(),
+					config_ids: z.array(z.number()).optional(),
+					runs: z.array(z.record(z.unknown())).optional(),
+				})
+				.strict(),
 		)
 		.optional()
 		.describe("Test runs to include in the plan"),

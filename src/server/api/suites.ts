@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { TestRailClient } from "../../client/api/index.js";
-import { createSuccessResponse, createErrorResponse } from "./utils.js";
+import {
+	createSuccessResponse,
+	createErrorResponse,
+	registerStrictTool,
+} from "./utils.js";
 import {
 	getSuitesSchema,
 	getSuiteSchema,
@@ -18,7 +22,8 @@ export function registerSuiteTools(
 	testRailClient: TestRailClient,
 ): void {
 	// Get all test suites for a project
-	server.tool(
+	registerStrictTool(
+		server,
 		"getSuites",
 		"Retrieves all test suites for a specified TestRail project",
 		{
@@ -48,7 +53,8 @@ export function registerSuiteTools(
 	);
 
 	// Get a specific test suite
-	server.tool(
+	registerStrictTool(
+		server,
 		"getSuite",
 		"Retrieves details of a specific test suite by ID",
 		{
@@ -78,7 +84,8 @@ export function registerSuiteTools(
 	);
 
 	// Create a new test suite
-	server.tool(
+	registerStrictTool(
+		server,
 		"addSuite",
 		"Creates a new test suite in the specified project",
 		{
@@ -116,7 +123,8 @@ export function registerSuiteTools(
 	);
 
 	// Update an existing test suite
-	server.tool(
+	registerStrictTool(
+		server,
 		"updateSuite",
 		"Updates an existing test suite",
 		{

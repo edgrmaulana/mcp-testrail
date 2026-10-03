@@ -3,7 +3,66 @@
 Notable changes to `@edgrmaulana/mcp-testrail`. Releases before 0.23.0 are
 listed at [Releases](https://github.com/edgrmaulana/mcp-testrail/releases).
 
-## 0.23.1 (unreleased)
+## 0.24.0 (unreleased)
+
+### Breaking changes
+
+**Unknown tool parameters are now refused instead of silently dropped**
+([#12](https://github.com/edgrmaulana/mcp-testrail/issues/12))
+
+Every tool already advertised `additionalProperties: false`, but tools were
+registered from plain shapes, which strip unknown keys rather than rejecting
+them. A misspelled parameter was discarded and the call still reported
+success — on a write tool, silent data loss.
+
+The trigger was a naming mismatch: the prerequisites field is exposed as
+`customPrerequisites`, while TestRail and `getCase` both call it
+`custom_preconds`. So this looked like it worked:
+
+```json
+{ "caseId": 534442, "customPreconds": "...new text..." }
+```
+
+It returned `Test case updated successfully` and changed nothing.
+
+Now:
+
+```
+Input validation error: Invalid arguments for tool updateCase:
+Unrecognized key(s) in object: 'customPreconds'
+```
+
+This applies to all 42 tools, reads included — a miscased `sectionid` on
+`getCases` used to return unfiltered results, which is just as easy to act on
+wrongly as a failed write. **Any caller passing a parameter the tool does not
+declare will now get an error where it previously got a success.** That is the
+point of the change, but it can surface callers that were quietly broken.
+
+To set a custom field the tools do not name individually, use `customFields`,
+which passes raw TestRail field names through:
+
+```json
+{ "caseId": 534442, "customFields": { "custom_preconds": "...new text..." } }
+```
+
+Array items are strict too. `addResultsForCases` is where this mattered most:
+a single typo in a batch — `commnet` for `comment` — was dropped for every
+result while the call still reported success. `addPlan`'s `entries[]` had an
+extra trap, since those keys are snake_case (`include_all`, `case_ids`) while
+every top-level parameter is camelCase, so the natural camelCase guess was
+silently discarded and the entry created with the wrong scope.
+
+`runs` inside a plan entry stays open (`z.record`), as a deliberate
+passthrough for TestRail's run configuration.
+
+### Changed
+
+Tools are registered through `McpServer.registerTool` rather than
+`McpServer.tool`, because only the former accepts a schema that can carry
+strictness. The SDK deprecated `tool()` in favour of `registerTool()` anyway.
+Tool names, descriptions and input shapes are unchanged.
+
+## 0.23.1 - 2026-10-02
 
 ### Fixed
 

@@ -95,29 +95,34 @@ export const addResultsSchema = {
 	runId: z.number().describe("TestRail Run ID"),
 	results: z
 		.array(
-			z.object({
-				testId: z.number().describe("TestRail Test ID"),
-				statusId: z
-					.number()
-					.optional()
-					.describe(
-						"Status ID (1:Pass, 2:Blocked, 3:Untested, 4:Retest, 5:Fail)",
-					),
-				comment: z.string().optional().describe("Comment for the test result"),
-				defects: z
-					.string()
-					.optional()
-					.describe("Defects linked to the test result"),
-				assignedtoId: z
-					.number()
-					.optional()
-					.describe("User to assign the test to"),
-				version: z.string().optional().describe("Version or build tested"),
-				elapsed: z
-					.string()
-					.optional()
-					.describe("Time spent testing (e.g., '30s', '2m 30s')"),
-			}),
+			z
+				.object({
+					testId: z.number().describe("TestRail Test ID"),
+					statusId: z
+						.number()
+						.optional()
+						.describe(
+							"Status ID (1:Pass, 2:Blocked, 3:Untested, 4:Retest, 5:Fail)",
+						),
+					comment: z
+						.string()
+						.optional()
+						.describe("Comment for the test result"),
+					defects: z
+						.string()
+						.optional()
+						.describe("Defects linked to the test result"),
+					assignedtoId: z
+						.number()
+						.optional()
+						.describe("User to assign the test to"),
+					version: z.string().optional().describe("Version or build tested"),
+					elapsed: z
+						.string()
+						.optional()
+						.describe("Time spent testing (e.g., '30s', '2m 30s')"),
+				})
+				.strict(),
 		)
 		.describe("Array of test results to add"),
 };
@@ -127,29 +132,34 @@ export const addResultsForCasesSchema = {
 	runId: z.number().describe("TestRail Run ID"),
 	results: z
 		.array(
-			z.object({
-				caseId: z.number().describe("TestRail Case ID"),
-				statusId: z
-					.number()
-					.optional()
-					.describe(
-						"Status ID (1:Pass, 2:Blocked, 3:Untested, 4:Retest, 5:Fail)",
-					),
-				comment: z.string().optional().describe("Comment for the test result"),
-				defects: z
-					.string()
-					.optional()
-					.describe("Defects linked to the test result"),
-				assignedtoId: z
-					.number()
-					.optional()
-					.describe("User to assign the test to"),
-				version: z.string().optional().describe("Version or build tested"),
-				elapsed: z
-					.string()
-					.optional()
-					.describe("Time spent testing (e.g., '30s', '2m 30s')"),
-			}),
+			z
+				.object({
+					caseId: z.number().describe("TestRail Case ID"),
+					statusId: z
+						.number()
+						.optional()
+						.describe(
+							"Status ID (1:Pass, 2:Blocked, 3:Untested, 4:Retest, 5:Fail)",
+						),
+					comment: z
+						.string()
+						.optional()
+						.describe("Comment for the test result"),
+					defects: z
+						.string()
+						.optional()
+						.describe("Defects linked to the test result"),
+					assignedtoId: z
+						.number()
+						.optional()
+						.describe("User to assign the test to"),
+					version: z.string().optional().describe("Version or build tested"),
+					elapsed: z
+						.string()
+						.optional()
+						.describe("Time spent testing (e.g., '30s', '2m 30s')"),
+				})
+				.strict(),
 		)
 		.describe("Array of test case results to add"),
 };

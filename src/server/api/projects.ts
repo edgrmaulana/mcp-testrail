@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { TestRailClient } from "../../client/api/index.js";
-import { createSuccessResponse, createErrorResponse } from "./utils.js";
+import {
+	createSuccessResponse,
+	createErrorResponse,
+	registerStrictTool,
+} from "./utils.js";
 import {
 	getProjectsSchema,
 	getProjectSchema,
@@ -19,7 +23,8 @@ export function registerProjectTools(
 	testRailClient: TestRailClient,
 ): void {
 	// Get all projects
-	server.tool(
+	registerStrictTool(
+		server,
 		"getProjects",
 		"Retrieves all TestRail projects",
 		{},
@@ -44,7 +49,8 @@ export function registerProjectTools(
 	);
 
 	// Get a specific project by ID
-	server.tool(
+	registerStrictTool(
+		server,
 		"getProject",
 		"Retrieves details of a specific TestRail project by ID",
 		{

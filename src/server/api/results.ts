@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { TestRailClient } from "../../client/api/index.js";
-import { createSuccessResponse, createErrorResponse } from "./utils.js";
+import {
+	createSuccessResponse,
+	createErrorResponse,
+	registerStrictTool,
+} from "./utils.js";
 import {
 	getResultsSchema,
 	getResultsForCaseSchema,
@@ -19,7 +23,8 @@ export function registerResultTools(
 	testRailClient: TestRailClient,
 ): void {
 	// Get test results for a test
-	server.tool(
+	registerStrictTool(
+		server,
 		"getResults",
 		"Retrieves test results for a specific test",
 		getResultsSchema,
@@ -47,7 +52,8 @@ export function registerResultTools(
 	);
 
 	// Get test results for a specific test case in a run
-	server.tool(
+	registerStrictTool(
+		server,
 		"getResultsForCase",
 		"Retrieves test results for a specific test case in a test run",
 		getResultsForCaseSchema,
@@ -76,7 +82,8 @@ export function registerResultTools(
 	);
 
 	// Get all test results for a test run
-	server.tool(
+	registerStrictTool(
+		server,
 		"getResultsForRun",
 		"Retrieves all test results for a test run",
 		getResultsForRunSchema,
@@ -104,7 +111,8 @@ export function registerResultTools(
 	);
 
 	// Add a result for a specific test case in a run
-	server.tool(
+	registerStrictTool(
+		server,
 		"addResultForCase",
 		"Adds a test result for a specific test case in a test run",
 		addResultForCaseSchema,
@@ -166,7 +174,8 @@ export function registerResultTools(
 	);
 
 	// Add results for multiple test cases
-	server.tool(
+	registerStrictTool(
+		server,
 		"addResultsForCases",
 		"Adds test results for multiple test cases in a test run",
 		addResultsForCasesSchema,
