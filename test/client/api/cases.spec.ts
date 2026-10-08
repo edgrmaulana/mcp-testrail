@@ -607,4 +607,16 @@ describe('Cases API', () => {
     expect(result).toEqual(updatedCase);
     expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_case/9');
   });
+
+  it('updates multiple cases without a project id (issue #14)', async () => {
+    // update_cases keys off the suite id alone, so projectId is optional.
+    mockAxiosInstance.post.mockResolvedValue({ data: {} });
+
+    await client.cases.updateCases(undefined, 901, { custom_automation_type_new: 7 }, [1, 2]);
+
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/update_cases/901', {
+      custom_automation_type_new: 7,
+      case_ids: [1, 2],
+    });
+  });
 });

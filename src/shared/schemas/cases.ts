@@ -173,7 +173,9 @@ export const getTestCaseHistorySchema = z.object({
 
 // Schema for updating multiple test cases
 export const updateTestCasesSchema = z.object({
-	projectId: z.number().describe("TestRail Project ID"),
+	// TestRail's update_cases route keys off the suite id alone, so the project
+	// id is accepted for symmetry with the other tools but never sent.
+	projectId: z.number().optional().describe("TestRail Project ID (unused)"),
 	suiteId: z.number().describe("TestRail Suite ID"),
 	caseIds: z.array(z.number()).describe("Array of TestRail Case IDs"),
 	title: z.string().optional().describe("Test case title"),

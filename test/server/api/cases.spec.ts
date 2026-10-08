@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { filterCaseColumns } from "../../../src/server/api/cases.js";
+import {
+	buildCasePayload,
+	filterCaseColumns,
+} from "../../../src/server/api/cases.js";
 
 // A row shaped like what TestRail's get_cases actually returns for a project
 // that defines its own custom fields.
@@ -120,5 +123,64 @@ describe("filterCaseColumns", () => {
 		expect(filtered.custom_business_unit).toBe(3);
 		expect(filtered.custom_is_regression).toBe(true);
 		expect(filtered.custom_unset).toBeNull();
+	});
+});
+
+// Project-defined custom fields have no named parameter, so customFields is the
+// only path to a field TestRail marks required (issue #14). These pin that path
+// and the one place it must not behave like a named parameter.
+describe("buildCasePayload", () => {
+	it("maps named parameters to TestRail's field names", () => {
+		const data = buildCasePayload({
+			title: "User can log in",
+			typeId: 1,
+			customPrerequisites: "logged out",
+			customSteps: "tap login",
+		});
+
+		expect(data).toEqual({
+			title: "User can log in",
+			type_id: 1,
+			custom_preconds: "logged out",
+			custom_steps: "tap login",
+		});
+	});
+
+	it("passes project-defined custom fields through verbatim", () => {
+		const data = buildCasePayload({
+			title: "Case",
+			customFields: { custom_business_unit: 5, custom_automation_type_new: 7 },
+		});
+
+		expect(data).toEqual({
+			title: "Case",
+			custom_business_unit: 5,
+			custom_automation_type_new: 7,
+		});
+	});
+
+	it("sends a custom field the caller deliberately cleared", () => {
+		// An omitted named parameter must not blank a stored value, but a custom
+		// field the caller set to "" or null is an explicit clear and has to reach
+		// TestRail; the old per-handler strip loop dropped both.
+		const data = buildCasePayload({
+			customFields: { custom_notes: "", custom_owner: null },
+		});
+
+		expect(data).toEqual({ custom_notes: "", custom_owner: null });
+	});
+
+	it("omits named parameters that were not supplied", () => {
+		expect(buildCasePayload({ title: "Only a title" })).toEqual({
+			title: "Only a title",
+		});
+	});
+
+	it("ignores a zero custom field value only when named", () => {
+		// typeId: 0 is not a valid TestRail id, but custom_business_unit: 0 can be
+		// a real option value, so customFields keeps it.
+		expect(
+			buildCasePayload({ typeId: 0, customFields: { custom_bu: 0 } }),
+		).toEqual({ custom_bu: 0 });
 	});
 });
