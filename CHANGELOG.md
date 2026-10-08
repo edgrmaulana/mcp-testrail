@@ -3,7 +3,47 @@
 Notable changes to `@edgrmaulana/mcp-testrail`. Releases before 0.23.0 are
 listed at [Releases](https://github.com/edgrmaulana/mcp-testrail/releases).
 
-## 0.24.0 (unreleased)
+## 0.24.1 - 2026-10-08
+
+### Fixed
+
+**A custom field cleared on purpose is now sent**
+([#14](https://github.com/edgrmaulana/mcp-testrail/issues/14))
+
+`addCase` and `updateCases` flattened `customFields` into the request body and
+then stripped every empty, `null` or `undefined` value from it. `""` and `null`
+are how TestRail clears a field, so this reported success and changed nothing:
+
+```json
+{ "caseId": 534158, "customFields": { "custom_notes": "" } }
+```
+
+Values supplied through `customFields` are now forwarded verbatim, since a
+caller who names a field means the value they gave. Named parameters keep their
+previous behavior and are still dropped when empty, so an omitted argument
+never blanks a stored value. `updateCase` had no stripping loop at all, so the
+three tools used to disagree about identical input; they no longer do.
+
+**`updateCases` no longer requires `projectId`**
+
+TestRail's `update_cases` endpoint is scoped by the suite id in its path and
+never receives a project id, which this wrapper had always discarded. The
+parameter is now optional and documented as ignored, and a failure names the
+suite id instead of reporting `Error updating test cases for project
+undefined`.
+
+Note for anyone who hit the original report: passing project-defined custom
+fields was already supported in 0.24.0 through `customFields`, e.g.
+`{ "customFields": { "custom_business_unit": 5 } }`. Individual `custom*`
+parameters such as `customBusinessUnit` are not declared and are refused by
+design.
+
+### Changed
+
+The request body for `addCase`, `updateCase` and `updateCases` is built by one
+shared `buildCasePayload` function instead of three copies of the same logic.
+
+## 0.24.0 - 2026-10-03
 
 ### Breaking changes
 

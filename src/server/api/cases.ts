@@ -68,6 +68,57 @@ const CUSTOM_TEXT_LIMIT = 250;
 const TRUNCATION_NOTE = "...[truncated, use getCase for the full value]";
 
 /**
+ * Builds the snake_case body TestRail expects from a case tool's camelCase
+ * arguments. Named parameters are dropped when falsy so an omitted argument
+ * never blanks a stored value; project-defined fields arrive through
+ * `customFields` and are sent verbatim, because a caller who names a field
+ * explicitly means the value they gave - including an empty string or null,
+ * which is how TestRail clears a field.
+ * @param args The validated tool arguments (extra keys are ignored)
+ * @returns The request body for add_case / update_case / update_cases
+ */
+export function buildCasePayload(args: {
+	title?: string;
+	typeId?: number;
+	priorityId?: number;
+	estimate?: string;
+	milestoneId?: number;
+	refs?: string;
+	templateId?: number;
+	customPrerequisites?: string;
+	customSteps?: string;
+	customExpected?: string;
+	customStepsSeparated?: unknown;
+	customFields?: Record<string, unknown>;
+}): Record<string, unknown> {
+	const data: Record<string, unknown> = {};
+	const named: [string, unknown][] = [
+		["title", args.title],
+		["type_id", args.typeId],
+		["priority_id", args.priorityId],
+		["estimate", args.estimate],
+		["milestone_id", args.milestoneId],
+		["refs", args.refs],
+		["template_id", args.templateId],
+		["custom_preconds", args.customPrerequisites],
+		["custom_steps", args.customSteps],
+		["custom_expected", args.customExpected],
+		["custom_steps_separated", args.customStepsSeparated],
+	];
+	for (const [key, value] of named) {
+		if (value) {
+			data[key] = value;
+		}
+	}
+	for (const [key, value] of Object.entries(args.customFields ?? {})) {
+		if (value !== undefined) {
+			data[key] = value;
+		}
+	}
+	return data;
+}
+
+/**
  * Reduces a test case to the fields worth returning in a list response:
  * the default columns plus any project-defined custom field. Custom field
  * names vary per project and cannot be read off TestRailCaseSchema, so they
@@ -251,87 +302,8 @@ export function registerCaseTools(
 		},
 		async (args, extra) => {
 			try {
-				const {
-					sectionId,
-					title,
-					typeId,
-					priorityId,
-					estimate,
-					milestoneId,
-					refs,
-					templateId,
-					customPrerequisites,
-					customSteps,
-					customExpected,
-					customStepsSeparated,
-					customFields,
-				} = args;
-				// Build test case data
-				const data: Record<string, unknown> = {};
-
-				// Add title if specified
-				if (title) {
-					data.title = title;
-				}
-
-				// Add type ID if specified
-				if (typeId) {
-					data.type_id = typeId;
-				}
-
-				// Add priority ID if specified
-				if (priorityId) {
-					data.priority_id = priorityId;
-				}
-
-				// Add estimate if specified
-				if (estimate) {
-					data.estimate = estimate;
-				}
-
-				// Add milestone ID if specified
-				if (milestoneId) {
-					data.milestone_id = milestoneId;
-				}
-
-				// Add references if specified
-				if (refs) {
-					data.refs = refs;
-				}
-
-				// Add template ID if specified
-				if (templateId) {
-					data.template_id = templateId;
-				}
-
-				// Add custom fields if specified
-				if (customPrerequisites) {
-					data.custom_preconds = customPrerequisites;
-				}
-				if (customSteps) {
-					data.custom_steps = customSteps;
-				}
-				if (customExpected) {
-					data.custom_expected = customExpected;
-				}
-				if (customStepsSeparated) {
-					data.custom_steps_separated = customStepsSeparated;
-				}
-
-				// Add additional custom fields from customFields object
-				if (customFields) {
-					for (const [key, value] of Object.entries(customFields)) {
-						data[key] = value;
-					}
-				}
-
-				// Remove empty, undefined, null fields to avoid API errors
-				for (const key of Object.keys(data)) {
-					const value = data[key];
-					if (value === undefined || value === null || value === "") {
-						delete data[key];
-					}
-				}
+				const { sectionId } = args;
+				const data = buildCasePayload(args);
 
 				const testCase = await testRailClient.cases.addCase(sectionId, data);
 				const successResponse = createSuccessResponse(
@@ -373,79 +345,8 @@ export function registerCaseTools(
 		},
 		async (args, extra) => {
 			try {
-				const {
-					caseId,
-					title,
-					typeId,
-					priorityId,
-					estimate,
-					milestoneId,
-					refs,
-					templateId,
-					customPrerequisites,
-					customSteps,
-					customExpected,
-					customStepsSeparated,
-					customFields,
-				} = args;
-				// Build update data
-				const data: Record<string, unknown> = {};
-
-				// Add title if specified
-				if (title) {
-					data.title = title;
-				}
-
-				// Add type ID if specified
-				if (typeId) {
-					data.type_id = typeId;
-				}
-
-				// Add priority ID if specified
-				if (priorityId) {
-					data.priority_id = priorityId;
-				}
-
-				// Add estimate if specified
-				if (estimate) {
-					data.estimate = estimate;
-				}
-
-				// Add milestone ID if specified
-				if (milestoneId) {
-					data.milestone_id = milestoneId;
-				}
-
-				// Add references if specified
-				if (refs) {
-					data.refs = refs;
-				}
-
-				// Add template ID if specified
-				if (templateId) {
-					data.template_id = templateId;
-				}
-
-				// Add custom fields if specified
-				if (customPrerequisites) {
-					data.custom_preconds = customPrerequisites;
-				}
-				if (customSteps) {
-					data.custom_steps = customSteps;
-				}
-				if (customExpected) {
-					data.custom_expected = customExpected;
-				}
-				if (customStepsSeparated) {
-					data.custom_steps_separated = customStepsSeparated;
-				}
-
-				// Add additional custom fields from customFields object
-				if (customFields) {
-					for (const [key, value] of Object.entries(customFields)) {
-						data[key] = value;
-					}
-				}
+				const { caseId } = args;
+				const data = buildCasePayload(args);
 
 				const testCase = await testRailClient.cases.updateCase(caseId, data);
 				const successResponse = createSuccessResponse(
@@ -638,7 +539,7 @@ export function registerCaseTools(
 	registerStrictTool(
 		server,
 		"updateCases",
-		"Updates multiple test cases simultaneously with the same field values. NOTE: templateId=2 is required to use customStepsSeparated (array of step objects with 'content' and 'expected' fields). For simple text steps, use customSteps and customExpected instead. Use customFields for any additional custom fields (e.g., {custom_case_security_score: 'high'}).",
+		"Updates multiple test cases simultaneously with the same field values. REQUIRED: suiteId, caseIds - the suite id is what scopes this call, projectId is accepted but ignored. NOTE: templateId=2 is required to use customStepsSeparated (array of step objects with 'content' and 'expected' fields). For simple text steps, use customSteps and customExpected instead. Use customFields for any additional custom fields (e.g., {custom_case_security_score: 'high'}).",
 		{
 			projectId: updateTestCasesSchema.shape.projectId,
 			suiteId: updateTestCasesSchema.shape.suiteId,
@@ -658,90 +559,9 @@ export function registerCaseTools(
 		},
 		async (args, extra) => {
 			try {
-				const {
-					projectId,
-					suiteId,
-					caseIds,
-					title,
-					typeId,
-					priorityId,
-					estimate,
-					milestoneId,
-					refs,
-					templateId,
-					customPrerequisites,
-					customSteps,
-					customExpected,
-					customStepsSeparated,
-					customFields,
-				} = args;
+				const { projectId, suiteId, caseIds } = args;
 
-				// Build update data
-				const data: Record<string, unknown> = {};
-
-				// Add title if specified
-				if (title) {
-					data.title = title;
-				}
-
-				// Add type ID if specified
-				if (typeId) {
-					data.type_id = typeId;
-				}
-
-				// Add priority ID if specified
-				if (priorityId) {
-					data.priority_id = priorityId;
-				}
-
-				// Add estimate if specified
-				if (estimate) {
-					data.estimate = estimate;
-				}
-
-				// Add milestone ID if specified
-				if (milestoneId) {
-					data.milestone_id = milestoneId;
-				}
-
-				// Add references if specified
-				if (refs) {
-					data.refs = refs;
-				}
-
-				// Add template ID if specified
-				if (templateId) {
-					data.template_id = templateId;
-				}
-
-				// Add custom fields if specified
-				if (customPrerequisites) {
-					data.custom_preconds = customPrerequisites;
-				}
-				if (customSteps) {
-					data.custom_steps = customSteps;
-				}
-				if (customExpected) {
-					data.custom_expected = customExpected;
-				}
-				if (customStepsSeparated) {
-					data.custom_steps_separated = customStepsSeparated;
-				}
-
-				// Add additional custom fields from customFields object
-				if (customFields) {
-					for (const [key, value] of Object.entries(customFields)) {
-						data[key] = value;
-					}
-				}
-
-				// Remove empty, undefined, null fields to avoid API errors
-				for (const key of Object.keys(data)) {
-					const value = data[key];
-					if (value === undefined || value === null || value === "") {
-						delete data[key];
-					}
-				}
+				const data = buildCasePayload(args);
 
 				await testRailClient.cases.updateCases(
 					projectId,
@@ -755,7 +575,7 @@ export function registerCaseTools(
 				return successResponse;
 			} catch (error) {
 				const errorResponse = createErrorResponse(
-					`Error updating test cases for project ${args.projectId}`,
+					`Error updating test cases in suite ${args.suiteId}`,
 					error,
 				);
 				return errorResponse;
