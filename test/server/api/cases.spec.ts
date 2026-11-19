@@ -2,6 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
 	buildCasePayload,
 	filterCaseColumns,
+	selectFields,
+	invalidFieldHint,
+	parseOptionItems,
+	decodeCustomOptions,
 } from "../../../src/server/api/cases.js";
 
 // A row shaped like what TestRail's get_cases actually returns for a project
@@ -182,5 +186,235 @@ describe("buildCasePayload", () => {
 		expect(
 			buildCasePayload({ typeId: 0, customFields: { custom_bu: 0 } }),
 		).toEqual({ custom_bu: 0 });
+	});
+});
+
+describe("selectFields", () => {
+	it("returns the whole object when no fields are given", () => {
+		expect(selectFields(testRailCase)).toEqual(testRailCase);
+		expect(selectFields(testRailCase, [])).toEqual(testRailCase);
+	});
+
+	it("keeps only the requested keys", () => {
+		expect(selectFields(testRailCase, ["id", "title", "refs"])).toEqual({
+			id: 101,
+			title: "User can log in",
+			refs: "ANN-1234",
+		});
+	});
+
+	it("ignores unknown keys instead of erroring", () => {
+		expect(selectFields(testRailCase, ["id", "nope"])).toEqual({ id: 101 });
+	});
+});
+
+describe("invalidFieldHint", () => {
+	const fields = [
+		{ system_name: "custom_mission", is_active: true },
+		{ system_name: "custom_retired", is_active: false },
+	];
+
+	it("lists the active custom fields when TestRail names an invalid one", async () => {
+		await expect(
+			invalidFieldHint(
+				new Error("Field :custom_nope is not a valid field."),
+				async () => fields,
+			),
+		).resolves.toEqual(["custom_mission"]);
+	});
+
+	it("leaves other errors alone", async () => {
+		await expect(
+			invalidFieldHint(new Error("Section not found"), async () => fields),
+		).resolves.toBeNull();
+	});
+
+	it("leaves the error alone when the field list itself fails", async () => {
+		await expect(
+			invalidFieldHint(
+				new Error("Field :custom_nope is not a valid field."),
+				async () => {
+					throw new Error("down");
+				},
+			),
+		).resolves.toBeNull();
+	});
+});
+
+describe("parseOptionItems", () => {
+	it("reads comma-separated options", () => {
+		expect(parseOptionItems("1, Open\n2, Resolved")).toEqual(
+			new Map([
+				[1, "Open"],
+				[2, "Resolved"],
+			]),
+		);
+	});
+
+	it("reads colon-separated options and skips text formats", () => {
+		expect(parseOptionItems("1: Low\nA text format line\n3: High")).toEqual(
+			new Map([
+				[1, "Low"],
+				[3, "High"],
+			]),
+		);
+	});
+});
+
+describe("decodeCustomOptions", () => {
+	const field = (
+		override: Record<string, unknown> = {},
+		items = "1, Manual\n3, No Need To Automated",
+	) => ({
+		id: 1,
+		type_id: 6,
+		name: "Automation Status",
+		system_name: "custom_automation_status",
+		label: "Automation Status",
+		description: "",
+		configs: [
+			{
+				id: "1",
+				context: { is_global: false, project_ids: [24] },
+				options: {
+					default_value: "",
+					format: "",
+					is_required: "",
+					rows: "",
+					items,
+				},
+			},
+		],
+		display_order: 1,
+		include_all: false,
+		template_ids: [],
+		is_active: true,
+		status_id: 1,
+		...override,
+	});
+
+	const testCase = {
+		id: 37747,
+		title: "Starter",
+		section_id: 1,
+		template_id: 4,
+		type_id: 9,
+		priority_id: 2,
+		custom_automation_status: 3,
+	} as never;
+
+	it("decodes a project-scoped dropdown value", () => {
+		expect(decodeCustomOptions([field()], testCase, 24)).toEqual({
+			custom_automation_status: { id: 3, name: "No Need To Automated" },
+		});
+	});
+
+	it("decodes multi-select arrays and unknown ids honestly", () => {
+		const multi = { ...testCase, custom_platform: [1, 99] } as never;
+		const platform = field(
+			{ system_name: "custom_platform", template_ids: [] },
+			"1, Web\n2, Mobile",
+		);
+		expect(decodeCustomOptions([field(), platform], multi, 24)).toEqual({
+			custom_automation_status: { id: 3, name: "No Need To Automated" },
+			custom_platform: [
+				{ id: 1, name: "Web" },
+				{ id: 99, name: null },
+			],
+		});
+	});
+
+	it("skips fields for other projects or templates", () => {
+		const otherProject = field({
+			configs: [
+				{
+					id: "1",
+					context: { is_global: false, project_ids: [7] },
+					options: {
+						default_value: "",
+						format: "",
+						is_required: "",
+						rows: "",
+						items: "3, Automated",
+					},
+				},
+			],
+		});
+		const otherTemplate = field({ template_ids: [2] });
+		expect(
+			decodeCustomOptions([otherProject, otherTemplate], testCase, 24),
+		).toEqual({});
+	});
+
+	it("skips text fields with no options and null values", () => {
+		const text = field({ system_name: "custom_notes" }, "");
+		const unset = { ...testCase, custom_notes: null } as never;
+		expect(decodeCustomOptions([text], unset, 24)).toEqual({});
+	});
+
+	it("prefers the project table over a global default listed first", () => {
+		const globalFirst = field({
+			configs: [
+				{
+					id: "1",
+					context: { is_global: true, project_ids: [] },
+					options: {
+						default_value: "",
+						format: "",
+						is_required: "",
+						rows: "",
+						items: "3, Automated",
+					},
+				},
+				{
+					id: "2",
+					context: { is_global: false, project_ids: [24] },
+					options: {
+						default_value: "",
+						format: "",
+						is_required: "",
+						rows: "",
+						items: "3, No Need To Automated",
+					},
+				},
+			],
+		});
+		expect(decodeCustomOptions([globalFirst], testCase, 24)).toEqual({
+			custom_automation_status: { id: 3, name: "No Need To Automated" },
+		});
+	});
+
+	it("falls back to the global table when the project has none", () => {
+		const globalOnly = field({
+			configs: [
+				{
+					id: "1",
+					context: { is_global: true, project_ids: [] },
+					options: {
+						default_value: "",
+						format: "",
+						is_required: "",
+						rows: "",
+						items: "3, Automated",
+					},
+				},
+			],
+		});
+		expect(decodeCustomOptions([globalOnly], testCase, 24)).toEqual({
+			custom_automation_status: { id: 3, name: "Automated" },
+		});
+	});
+
+	it("survives a config missing items instead of failing the call", () => {
+		const missingItems = field({
+			configs: [
+				{
+					id: "1",
+					context: { is_global: false, project_ids: [24] },
+					options: undefined as never,
+				},
+			],
+		});
+		expect(decodeCustomOptions([missingItems], testCase, 24)).toEqual({});
 	});
 });

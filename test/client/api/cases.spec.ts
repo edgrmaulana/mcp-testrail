@@ -1,622 +1,791 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { setupMocks, createTestClient } from './testHelper';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { setupMocks, createTestClient } from "./testHelper";
 
-describe('Cases API', () => {
-  let mockAxiosInstance: ReturnType<typeof setupMocks>;
-  let client: ReturnType<typeof createTestClient>;
-  
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockAxiosInstance = setupMocks();
-    client = createTestClient();
-  });
-  
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
+describe("Cases API", () => {
+	let mockAxiosInstance: ReturnType<typeof setupMocks>;
+	let client: ReturnType<typeof createTestClient>;
 
-  it('retrieves a test case', async () => {
-    // Mock response
-    const mockCase = { 
-      id: 1, 
-      title: 'Test Case', 
-      section_id: 1,
-      template_id: 1,
-      type_id: 1,
-      priority_id: 2,
-      created_by: 1,
-      created_on: 1609459200,
-      updated_by: 1,
-      updated_on: 1609459300,
-      suite_id: 1
-    };
-    mockAxiosInstance.get.mockResolvedValue({ data: mockCase });
-    
-    // Test method
-    const result = await client.cases.getCase(1);
-    
-    // Verify axios get was called correctly
-    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_case/1');
-    
-    // Verify result
-    expect(result).toEqual(mockCase);
-  });
-  
-  it('creates a new test case', async () => {
-    // Mock response
-    const mockCase = { 
-      id: 1, 
-      title: 'New Test Case', 
-      section_id: 1,
-      template_id: 1,
-      type_id: 1,
-      priority_id: 2,
-      created_by: 1,
-      created_on: 1609459200,
-      updated_by: 1,
-      updated_on: 1609459300,
-      suite_id: 1
-    };
-    mockAxiosInstance.post.mockResolvedValue({ data: mockCase });
-    
-    // Test data
-    const caseData = {
-      title: 'New Test Case',
-      template_id: 1,
-      type_id: 1,
-      priority_id: 2
-    };
-    
-    // Test method
-    const result = await client.cases.addCase(1, caseData);
-    
-    // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/add_case/1', caseData);
-    
-    // Verify result
-    expect(result).toEqual(mockCase);
-  });
-  
-  it('handles errors when retrieving a test case', async () => {
-    // Mock error response
-    const mockError = {
-      response: {
-        status: 404,
-        data: { error: 'Test case not found' }
-      }
-    };
-    mockAxiosInstance.get.mockRejectedValue(mockError);
-    
-    // Test error handling
-    await expect(client.cases.getCase(999)).rejects.toThrow();
-    
-    // Verify axios get was called correctly
-    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_case/999');
-  });
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockAxiosInstance = setupMocks();
+		client = createTestClient();
+	});
 
-  it('updates an existing test case', async () => {
-    // Mock response
-    const mockCase = { 
-      id: 1, 
-      title: 'Updated Test Case', 
-      section_id: 1,
-      template_id: 1,
-      type_id: 2,
-      priority_id: 3,
-      created_by: 1,
-      created_on: 1609459200,
-      updated_by: 1,
-      updated_on: 1609459400,
-      suite_id: 1
-    };
-    mockAxiosInstance.post.mockResolvedValue({ data: mockCase });
-    
-    // Test data
-    const caseData = {
-      title: 'Updated Test Case',
-      type_id: 2,
-      priority_id: 3
-    };
-    
-    // Test method
-    const result = await client.cases.updateCase(1, caseData);
-    
-    // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/update_case/1', caseData);
-    
-    // Verify result
-    expect(result).toEqual(mockCase);
-  });
+	afterEach(() => {
+		vi.resetAllMocks();
+	});
 
-  it('deletes a test case', async () => {
-    // Mock successful deletion (no response data)
-    mockAxiosInstance.post.mockResolvedValue({ data: {} });
-    
-    // Test method
-    await client.cases.deleteCase(1);
-    
-    // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/delete_case/1', {});
-  });
+	it("retrieves a test case", async () => {
+		// Mock response
+		const mockCase = {
+			id: 1,
+			title: "Test Case",
+			section_id: 1,
+			template_id: 1,
+			type_id: 1,
+			priority_id: 2,
+			created_by: 1,
+			created_on: 1609459200,
+			updated_by: 1,
+			updated_on: 1609459300,
+			suite_id: 1,
+		};
+		mockAxiosInstance.get.mockResolvedValue({ data: mockCase });
 
-  it('retrieves all test cases for a project', async () => {
-    // Mock response
-    const mockCasesArray = [
-      { 
-        id: 1, 
-        title: 'Test Case 1', 
-        section_id: 1,
-        template_id: 1,
-        type_id: 1,
-        priority_id: 2,
-        created_by: 1,
-        created_on: 1609459200,
-        updated_by: 1,
-        updated_on: 1609459300,
-        suite_id: 1
-      },
-      { 
-        id: 2, 
-        title: 'Test Case 2', 
-        section_id: 1,
-        template_id: 1,
-        type_id: 1,
-        priority_id: 3,
-        created_by: 1,
-        created_on: 1609459200,
-        updated_by: 1,
-        updated_on: 1609459300,
-        suite_id: 1
-      }
-    ];
-    
-    const mockCasesResponse = {
-      cases: mockCasesArray,
-      offset: 0,
-      limit: 50,
-      size: 2,
-      _links: {
-        next: null,
-        prev: null
-      }
-    };
-    
-    mockAxiosInstance.get.mockResolvedValue({ data: mockCasesResponse });
-    
-    // Test method with pagination parameters
-    const result = await client.cases.getCases(1, 1, { limit: 50, offset: 0 });  // projectId: 1, suiteId: 1, pagination
-    
-    // Verify axios get was called correctly with pagination parameters
-    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_cases/1', { 
-      params: {
-        suite_id: 1,
-        limit: 50,
-        offset: 0
-      }
-    });
-    
-    // Verify result
-    expect(result).toEqual(mockCasesResponse);
-  });
+		// Test method
+		const result = await client.cases.getCase(1);
 
-  it('retrieves test cases with all optional parameters', async () => {
-    // Mock response
-    mockAxiosInstance.get.mockResolvedValue({ data: {} });
+		// Verify axios get was called correctly
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith("/api/v2/get_case/1");
 
-    // Test method with all optional parameters
-    const params = {
-      limit: 25,
-      offset: 0,
-      created_by: '1,2,3', // Array converted to comma-separated string
-      filter: 'Login Test',
-      milestone_id: '5,6', // Array converted to comma-separated string
-      priority_id: '2,3', // Array converted to comma-separated string
-      refs: 'TR-123',
-      section_id: 1,
-      template_id: '1,2', // Array converted to comma-separated string
-      type_id: '1,2', // Array converted to comma-separated string
-      updated_by: '4,5', // Array converted to comma-separated string
-      label_id: '7,8' // Array converted to comma-separated string
-    };
+		// Verify result
+		expect(result).toEqual(mockCase);
+	});
 
-    await client.cases.getCases(1, 1, params);
+	it("creates a new test case", async () => {
+		// Mock response
+		const mockCase = {
+			id: 1,
+			title: "New Test Case",
+			section_id: 1,
+			template_id: 1,
+			type_id: 1,
+			priority_id: 2,
+			created_by: 1,
+			created_on: 1609459200,
+			updated_by: 1,
+			updated_on: 1609459300,
+			suite_id: 1,
+		};
+		mockAxiosInstance.post.mockResolvedValue({ data: mockCase });
 
-    // Verify axios get was called correctly with all parameters
-    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_cases/1', {
-      params: {
-        suite_id: 1,
-        limit: 25,
-        offset: 0,
-        created_by: '1,2,3',
-        filter: 'Login Test',
-        milestone_id: '5,6',
-        priority_id: '2,3',
-        refs: 'TR-123',
-        section_id: 1,
-        template_id: '1,2',
-        type_id: '1,2',
-        updated_by: '4,5',
-        label_id: '7,8'
-      }
-    });
-  });
+		// Test data
+		const caseData = {
+			title: "New Test Case",
+			template_id: 1,
+			type_id: 1,
+			priority_id: 2,
+		};
 
-  it('retrieves test cases with filter and refs parameters', async () => {
-    // Mock response
-    mockAxiosInstance.get.mockResolvedValue({ data: {} });
+		// Test method
+		const result = await client.cases.addCase(1, caseData);
 
-    // Test method with filter and refs parameters
-    const params = {
-      filter: 'Registration',
-      refs: 'TR-456'
-    };
+		// Verify axios post was called correctly
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/add_case/1",
+			caseData,
+		);
 
-    await client.cases.getCases(1, 1, params);
+		// Verify result
+		expect(result).toEqual(mockCase);
+	});
 
-    // Verify axios get was called correctly
-    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_cases/1', {
-      params: {
-        suite_id: 1,
-        filter: 'Registration',
-        refs: 'TR-456',
-        limit: 50,
-        offset: 0
-      }
-    });
-  });
+	it("handles errors when retrieving a test case", async () => {
+		// Mock error response
+		const mockError = {
+			response: {
+				status: 404,
+				data: { error: "Test case not found" },
+			},
+		};
+		mockAxiosInstance.get.mockRejectedValue(mockError);
 
-  it('retrieves test cases with section_id parameter', async () => {
-    // Mock response
-    mockAxiosInstance.get.mockResolvedValue({ data: {} });
+		// Test error handling
+		await expect(client.cases.getCase(999)).rejects.toThrow();
 
-    // Test method with section_id parameter
-    const params = {
-      section_id: 5
-    };
+		// Verify axios get was called correctly
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith("/api/v2/get_case/999");
+	});
 
-    await client.cases.getCases(1, 1, params);
+	it("updates an existing test case", async () => {
+		// Mock response
+		const mockCase = {
+			id: 1,
+			title: "Updated Test Case",
+			section_id: 1,
+			template_id: 1,
+			type_id: 2,
+			priority_id: 3,
+			created_by: 1,
+			created_on: 1609459200,
+			updated_by: 1,
+			updated_on: 1609459400,
+			suite_id: 1,
+		};
+		mockAxiosInstance.post.mockResolvedValue({ data: mockCase });
 
-    // Verify axios get was called correctly
-    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_cases/1', {
-      params: {
-        suite_id: 1,
-        section_id: 5,
-        limit: 50,
-        offset: 0
-      }
-    });
-  });
+		// Test data
+		const caseData = {
+			title: "Updated Test Case",
+			type_id: 2,
+			priority_id: 3,
+		};
 
-  it('retrieves test case history', async () => {
-    // Mock response
-    const mockHistory = [
-      {
-        id: 1,
-        case_id: 1,
-        user_id: 1,
-        timestamp: 1609459200,
-        changes: [
-          {
-            field: 'title',
-            old_value: 'Old Title',
-            new_value: 'New Title'
-          }
-        ]
-      }
-    ];
-    mockAxiosInstance.get.mockResolvedValue({ data: mockHistory });
-    
-    // Test method
-    const result = await client.cases.getCaseHistory(1);
-    
-    // Verify axios get was called correctly
-    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_history_for_case/1');
-    
-    // Verify result
-    expect(result).toEqual(mockHistory);
-  });
+		// Test method
+		const result = await client.cases.updateCase(1, caseData);
 
-  it('should copy test cases to section', async () => {
-    const mockResponse = { status: true };
-    mockAxiosInstance.post.mockResolvedValueOnce({ data: mockResponse });
+		// Verify axios post was called correctly
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/update_case/1",
+			caseData,
+		);
 
-    const result = await client.cases.copyToSection([1, 2], 2);
+		// Verify result
+		expect(result).toEqual(mockCase);
+	});
 
-    expect(result).toEqual(mockResponse);
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-      "/api/v2/copy_cases_to_section/2",
-      { case_ids: [1, 2] }
-    );
-  });
+	it("deletes a test case", async () => {
+		// Mock successful deletion (no response data)
+		mockAxiosInstance.post.mockResolvedValue({ data: {} });
 
-  it('should move test cases to section', async () => {
-    const mockResponse = { status: true };
-    mockAxiosInstance.post.mockResolvedValueOnce({ data: mockResponse });
+		// Test method
+		await client.cases.deleteCase(1);
 
-    const result = await client.cases.moveToSection([1, 2], 2);
+		// Verify axios post was called correctly
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/delete_case/1",
+			{},
+		);
+	});
 
-    expect(result).toEqual(mockResponse);
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-      "/api/v2/move_cases_to_section/2",
-      { case_ids: [1, 2] }
-    );
-  });
+	it("retrieves all test cases for a project", async () => {
+		// Mock response
+		const mockCasesArray = [
+			{
+				id: 1,
+				title: "Test Case 1",
+				section_id: 1,
+				template_id: 1,
+				type_id: 1,
+				priority_id: 2,
+				created_by: 1,
+				created_on: 1609459200,
+				updated_by: 1,
+				updated_on: 1609459300,
+				suite_id: 1,
+			},
+			{
+				id: 2,
+				title: "Test Case 2",
+				section_id: 1,
+				template_id: 1,
+				type_id: 1,
+				priority_id: 3,
+				created_by: 1,
+				created_on: 1609459200,
+				updated_by: 1,
+				updated_on: 1609459300,
+				suite_id: 1,
+			},
+		];
 
-  it('updates multiple test cases', async () => {
-    // Mock successful update (no response data)
-    mockAxiosInstance.post.mockResolvedValue({ data: {} });
-    
-    // Test data
-    const caseData = {
-      title: 'Updated Test Case',
-      type_id: 2,
-      priority_id: 3
-    };
-    const caseIds = [1, 2, 3];
-    
-    // Test method
-    await client.cases.updateCases(1, 900, caseData, caseIds);  // projectId: 1, suiteId: 900
-    
-    // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/update_cases/900', {
-      ...caseData,
-      case_ids: caseIds
-    });
-  });
+		const mockCasesResponse = {
+			cases: mockCasesArray,
+			offset: 0,
+			limit: 50,
+			size: 2,
+			_links: {
+				next: null,
+				prev: null,
+			},
+		};
 
-  it('deletes multiple test cases', async () => {
-    // Mock successful deletion (no response data)
-    mockAxiosInstance.post.mockResolvedValue({ data: {} });
-    
-    // Test data
-    const caseIds = [1, 2, 3];
-    
-    // Test method
-    await client.cases.deleteCases(1, 900, caseIds);  // projectId: 1, suiteId: 900
-    
-    // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/delete_cases/900', {
-      project_id: 1,
-      case_ids: caseIds
-    });
-  });
+		mockAxiosInstance.get.mockResolvedValue({ data: mockCasesResponse });
 
-  it('creates a test case with template_id and custom_steps_separated', async () => {
-    // Mock response
-    const mockCase = { 
-      id: 1, 
-      title: 'Test Case with Custom Steps', 
-      section_id: 1,
-      template_id: 2,
-      type_id: 1,
-      priority_id: 2,
-      created_by: 1,
-      created_on: 1609459200,
-      updated_by: 1,
-      updated_on: 1609459300,
-      suite_id: 1,
-      custom_steps_separated: [
-        { content: 'Step 1', expected: 'Expected 1' },
-        { content: 'Step 2', expected: 'Expected 2' }
-      ]
-    };
-    mockAxiosInstance.post.mockResolvedValue({ data: mockCase });
-    
-    // Test data with template_id and custom_steps_separated (typed)
-    const caseData = {
-      title: 'Test Case with Custom Steps',
-      template_id: 2,
-      type_id: 1,
-      priority_id: 2,
-      custom_steps_separated: [
-        { content: 'Step 1', expected: 'Expected 1' },
-        { content: 'Step 2', expected: 'Expected 2' }
-      ]
-    };
-    
-    // Test method
-    const result = await client.cases.addCase(1, caseData);
-    
-    // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/add_case/1', caseData);
-    
-    // Verify result
-    expect(result).toEqual(mockCase);
-    expect(result.template_id).toBe(2);
-    expect(result.custom_steps_separated).toEqual([
-      { content: 'Step 1', expected: 'Expected 1' },
-      { content: 'Step 2', expected: 'Expected 2' }
-    ]);
-  });
+		// Test method with pagination parameters
+		const result = await client.cases.getCases(1, 1, { limit: 50, offset: 0 }); // projectId: 1, suiteId: 1, pagination
 
-  it('rejects invalid data when creating a test case', async () => {
-    // Test data with invalid types
-    const invalidCaseData = {
-      title: 123, // should be string
-      type_id: 'invalid', // should be number
-      custom_steps_separated: [
-        { content: 'Step 1' } // missing 'expected' field
-      ]
-    } as any;
-    
-    // Test method should throw validation error
-    await expect(client.cases.addCase(1, invalidCaseData)).rejects.toThrow();
-    
-    // Verify axios post was not called
-    expect(mockAxiosInstance.post).not.toHaveBeenCalled();
-  });
+		// Verify axios get was called correctly with pagination parameters
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith("/api/v2/get_cases/1", {
+			params: {
+				suite_id: 1,
+				limit: 50,
+				offset: 0,
+			},
+		});
 
-  it('updates a test case with template_id and custom_steps_separated', async () => {
-    // Mock response
-    const mockCase = { 
-      id: 1, 
-      title: 'Updated Test Case with Custom Steps', 
-      section_id: 1,
-      template_id: 2,
-      type_id: 1,
-      priority_id: 2,
-      created_by: 1,
-      created_on: 1609459200,
-      updated_by: 1,
-      updated_on: 1609459400,
-      suite_id: 1,
-      custom_steps_separated: [
-        { content: 'Updated Step 1', expected: 'Updated Expected 1' },
-        { content: 'Updated Step 2', expected: 'Updated Expected 2' }
-      ]
-    };
-    mockAxiosInstance.post.mockResolvedValue({ data: mockCase });
-    
-    // Test data with template_id and custom_steps_separated (typed)
-    const caseData = {
-      title: 'Updated Test Case with Custom Steps',
-      template_id: 2,
-      custom_steps_separated: [
-        { content: 'Updated Step 1', expected: 'Updated Expected 1' },
-        { content: 'Updated Step 2', expected: 'Updated Expected 2' }
-      ]
-    };
-    
-    // Test method
-    const result = await client.cases.updateCase(1, caseData);
-    
-    // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/update_case/1', caseData);
-    
-    // Verify result
-    expect(result).toEqual(mockCase);
-    expect(result.template_id).toBe(2);
-    expect(result.custom_steps_separated).toEqual([
-      { content: 'Updated Step 1', expected: 'Updated Expected 1' },
-      { content: 'Updated Step 2', expected: 'Updated Expected 2' }
-    ]);
-  });
+		// Verify result
+		expect(result).toEqual(mockCasesResponse);
+	});
 
-  it('rejects invalid data when updating a test case', async () => {
-    // Test data with invalid types
-    const invalidCaseData = {
-      title: null, // should be string or undefined
-      priority_id: 'high', // should be number
-      custom_steps_separated: 'invalid' // should be array
-    } as any;
-    
-    // Test method should throw validation error
-    await expect(client.cases.updateCase(1, invalidCaseData)).rejects.toThrow();
-    
-    // Verify axios post was not called
-    expect(mockAxiosInstance.post).not.toHaveBeenCalled();
-  });
+	it("retrieves test cases with all optional parameters", async () => {
+		// Mock response
+		mockAxiosInstance.get.mockResolvedValue({ data: {} });
 
-  it('updates multiple test cases with template_id and custom_steps_separated', async () => {
-    // Mock successful update (no response data)
-    mockAxiosInstance.post.mockResolvedValue({ data: {} });
-    
-    // Test data with template_id and custom_steps_separated (typed)
-    const caseData = {
-      template_id: 2,
-      custom_steps_separated: [
-        { content: 'Bulk Step 1', expected: 'Bulk Expected 1' },
-        { content: 'Bulk Step 2', expected: 'Bulk Expected 2' }
-      ]
-    };
-    const caseIds = [1, 2, 3];
-    
-    // Test method
-    await client.cases.updateCases(1, 900, caseData, caseIds);  // projectId: 1, suiteId: 900
-    
-    // Verify axios post was called correctly
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/update_cases/900', {
-      ...caseData,
-      case_ids: caseIds
-    });
-  });
+		// Test method with all optional parameters
+		const params = {
+			limit: 25,
+			offset: 0,
+			created_by: "1,2,3", // Array converted to comma-separated string
+			filter: "Login Test",
+			milestone_id: "5,6", // Array converted to comma-separated string
+			priority_id: "2,3", // Array converted to comma-separated string
+			refs: "TR-123",
+			section_id: 1,
+			template_id: "1,2", // Array converted to comma-separated string
+			type_id: "1,2", // Array converted to comma-separated string
+			updated_by: "4,5", // Array converted to comma-separated string
+			label_id: "7,8", // Array converted to comma-separated string
+		};
 
-  it('rejects invalid data when updating multiple test cases', async () => {
-    // Test data with invalid types
-    const invalidCaseData = {
-      template_id: 'two', // should be number
-      custom_steps_separated: [
-        { content: 123, expected: 'Expected 1' } // content should be string
-      ]
-    } as any;
-    const caseIds = [1, 2, 3];
-    
-    // Test method should throw validation error
-    await expect(client.cases.updateCases(1, 1, invalidCaseData, caseIds)).rejects.toThrow();
+		await client.cases.getCases(1, 1, params);
 
-    // Verify axios post was not called
-    expect(mockAxiosInstance.post).not.toHaveBeenCalled();
-  });
+		// Verify axios get was called correctly with all parameters
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith("/api/v2/get_cases/1", {
+			params: {
+				suite_id: 1,
+				limit: 25,
+				offset: 0,
+				created_by: "1,2,3",
+				filter: "Login Test",
+				milestone_id: "5,6",
+				priority_id: "2,3",
+				refs: "TR-123",
+				section_id: 1,
+				template_id: "1,2",
+				type_id: "1,2",
+				updated_by: "4,5",
+				label_id: "7,8",
+			},
+		});
+	});
 
-  // TestRail returns HTTP 500 (but still creates/updates the record) when a
-  // required multi-select custom field is present. These assert the recovery path.
-  it('recovers the created case when addCase gets a spurious 500', async () => {
-    const createdCase = {
-      id: 42,
-      title: 'Multi-select case',
-      section_id: 5,
-      custom_platform: [4],
-    };
-    const error500 = {
-      response: { status: 500, data: { error: 'An unexpected error occurred.' } },
-    };
-    // add_case POST fails with 500...
-    mockAxiosInstance.post.mockRejectedValue(error500);
-    // ...recovery walks section -> suite -> cases and finds the created case.
-    mockAxiosInstance.get
-      .mockResolvedValueOnce({ data: { suite_id: 7 } }) // get_section
-      .mockResolvedValueOnce({ data: { project_id: 3 } }) // get_suite
-      .mockResolvedValueOnce({
-        data: { cases: [{ ...createdCase, id: 40 }, createdCase] },
-      }); // get_cases -> newest (id 42) wins
+	it("retrieves test cases with filter and refs parameters", async () => {
+		// Mock response
+		mockAxiosInstance.get.mockResolvedValue({ data: {} });
 
-    const result = await client.cases.addCase(5, { title: 'Multi-select case', custom_platform: [4] });
+		// Test method with filter and refs parameters
+		const params = {
+			filter: "Registration",
+			refs: "TR-456",
+		};
 
-    expect(result).toEqual(createdCase);
-    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_cases/3', {
-      params: { suite_id: 7, section_id: 5, limit: 250 },
-    });
-  });
+		await client.cases.getCases(1, 1, params);
 
-  it('re-throws when addCase 500s and no matching case is found', async () => {
-    const error500 = {
-      response: { status: 500, data: { error: 'An unexpected error occurred.' } },
-    };
-    mockAxiosInstance.post.mockRejectedValue(error500);
-    mockAxiosInstance.get
-      .mockResolvedValueOnce({ data: { suite_id: 7 } })
-      .mockResolvedValueOnce({ data: { project_id: 3 } })
-      .mockResolvedValueOnce({ data: { cases: [] } }); // no match
+		// Verify axios get was called correctly
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith("/api/v2/get_cases/1", {
+			params: {
+				suite_id: 1,
+				filter: "Registration",
+				refs: "TR-456",
+				limit: 50,
+				offset: 0,
+			},
+		});
+	});
 
-    await expect(
-      client.cases.addCase(5, { title: 'Multi-select case', custom_platform: [4] }),
-    ).rejects.toThrow();
-  });
+	it("retrieves test cases with section_id parameter", async () => {
+		// Mock response
+		mockAxiosInstance.get.mockResolvedValue({ data: {} });
 
-  it('recovers the updated case when updateCase gets a spurious 500', async () => {
-    const updatedCase = { id: 9, title: 'Updated', custom_platform: [1, 4] };
-    const error500 = {
-      response: { status: 500, data: { error: 'An unexpected error occurred.' } },
-    };
-    mockAxiosInstance.post.mockRejectedValue(error500);
-    // recovery re-fetches the case by id (exact, no heuristic).
-    mockAxiosInstance.get.mockResolvedValueOnce({ data: updatedCase });
+		// Test method with section_id parameter
+		const params = {
+			section_id: 5,
+		};
 
-    const result = await client.cases.updateCase(9, { custom_platform: [1, 4] });
+		await client.cases.getCases(1, 1, params);
 
-    expect(result).toEqual(updatedCase);
-    expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v2/get_case/9');
-  });
+		// Verify axios get was called correctly
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith("/api/v2/get_cases/1", {
+			params: {
+				suite_id: 1,
+				section_id: 5,
+				limit: 50,
+				offset: 0,
+			},
+		});
+	});
 
-  it('updates multiple cases without a project id (issue #14)', async () => {
-    // update_cases keys off the suite id alone, so projectId is optional.
-    mockAxiosInstance.post.mockResolvedValue({ data: {} });
+	it("retrieves test case history", async () => {
+		// Mock response
+		const mockHistory = [
+			{
+				id: 1,
+				case_id: 1,
+				user_id: 1,
+				timestamp: 1609459200,
+				changes: [
+					{
+						field: "title",
+						old_value: "Old Title",
+						new_value: "New Title",
+					},
+				],
+			},
+		];
+		mockAxiosInstance.get.mockResolvedValue({ data: mockHistory });
 
-    await client.cases.updateCases(undefined, 901, { custom_automation_type_new: 7 }, [1, 2]);
+		// Test method
+		const result = await client.cases.getCaseHistory(1);
 
-    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v2/update_cases/901', {
-      custom_automation_type_new: 7,
-      case_ids: [1, 2],
-    });
-  });
+		// Verify axios get was called correctly
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+			"/api/v2/get_history_for_case/1",
+		);
+
+		// Verify result
+		expect(result).toEqual(mockHistory);
+	});
+
+	it("should copy test cases to section", async () => {
+		const mockResponse = { status: true };
+		mockAxiosInstance.post.mockResolvedValueOnce({ data: mockResponse });
+
+		const result = await client.cases.copyToSection([1, 2], 2);
+
+		expect(result).toEqual(mockResponse);
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/copy_cases_to_section/2",
+			{ case_ids: [1, 2] },
+		);
+	});
+
+	it("should move test cases to section", async () => {
+		const mockResponse = { status: true };
+		mockAxiosInstance.post.mockResolvedValueOnce({ data: mockResponse });
+
+		const result = await client.cases.moveToSection([1, 2], 2);
+
+		expect(result).toEqual(mockResponse);
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/move_cases_to_section/2",
+			{ case_ids: [1, 2] },
+		);
+	});
+
+	it("updates multiple test cases", async () => {
+		// Mock successful update (no response data)
+		mockAxiosInstance.post.mockResolvedValue({ data: {} });
+
+		// Test data
+		const caseData = {
+			title: "Updated Test Case",
+			type_id: 2,
+			priority_id: 3,
+		};
+		const caseIds = [1, 2, 3];
+
+		// Test method
+		await client.cases.updateCases(1, 900, caseData, caseIds); // projectId: 1, suiteId: 900
+
+		// Verify axios post was called correctly
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/update_cases/900",
+			{
+				...caseData,
+				case_ids: caseIds,
+			},
+		);
+	});
+
+	it("deletes multiple test cases", async () => {
+		// Mock successful deletion (no response data)
+		mockAxiosInstance.post.mockResolvedValue({ data: {} });
+
+		// Test data
+		const caseIds = [1, 2, 3];
+
+		// Test method
+		await client.cases.deleteCases(1, 900, caseIds); // projectId: 1, suiteId: 900
+
+		// Verify axios post was called correctly
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/delete_cases/900",
+			{
+				project_id: 1,
+				case_ids: caseIds,
+			},
+		);
+	});
+
+	it("creates a test case with template_id and custom_steps_separated", async () => {
+		// Mock response
+		const mockCase = {
+			id: 1,
+			title: "Test Case with Custom Steps",
+			section_id: 1,
+			template_id: 2,
+			type_id: 1,
+			priority_id: 2,
+			created_by: 1,
+			created_on: 1609459200,
+			updated_by: 1,
+			updated_on: 1609459300,
+			suite_id: 1,
+			custom_steps_separated: [
+				{ content: "Step 1", expected: "Expected 1" },
+				{ content: "Step 2", expected: "Expected 2" },
+			],
+		};
+		mockAxiosInstance.post.mockResolvedValue({ data: mockCase });
+
+		// Test data with template_id and custom_steps_separated (typed)
+		const caseData = {
+			title: "Test Case with Custom Steps",
+			template_id: 2,
+			type_id: 1,
+			priority_id: 2,
+			custom_steps_separated: [
+				{ content: "Step 1", expected: "Expected 1" },
+				{ content: "Step 2", expected: "Expected 2" },
+			],
+		};
+
+		// Test method
+		const result = await client.cases.addCase(1, caseData);
+
+		// Verify axios post was called correctly
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/add_case/1",
+			caseData,
+		);
+
+		// Verify result
+		expect(result).toEqual(mockCase);
+		expect(result.template_id).toBe(2);
+		expect(result.custom_steps_separated).toEqual([
+			{ content: "Step 1", expected: "Expected 1" },
+			{ content: "Step 2", expected: "Expected 2" },
+		]);
+	});
+
+	it("rejects invalid data when creating a test case", async () => {
+		// Test data with invalid types
+		const invalidCaseData = {
+			title: 123, // should be string
+			type_id: "invalid", // should be number
+			custom_steps_separated: [
+				{ content: "Step 1" }, // missing 'expected' field
+			],
+		} as any;
+
+		// Test method should throw validation error
+		await expect(client.cases.addCase(1, invalidCaseData)).rejects.toThrow();
+
+		// Verify axios post was not called
+		expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+	});
+
+	it("updates a test case with template_id and custom_steps_separated", async () => {
+		// Mock response
+		const mockCase = {
+			id: 1,
+			title: "Updated Test Case with Custom Steps",
+			section_id: 1,
+			template_id: 2,
+			type_id: 1,
+			priority_id: 2,
+			created_by: 1,
+			created_on: 1609459200,
+			updated_by: 1,
+			updated_on: 1609459400,
+			suite_id: 1,
+			custom_steps_separated: [
+				{ content: "Updated Step 1", expected: "Updated Expected 1" },
+				{ content: "Updated Step 2", expected: "Updated Expected 2" },
+			],
+		};
+		mockAxiosInstance.post.mockResolvedValue({ data: mockCase });
+
+		// Test data with template_id and custom_steps_separated (typed)
+		const caseData = {
+			title: "Updated Test Case with Custom Steps",
+			template_id: 2,
+			custom_steps_separated: [
+				{ content: "Updated Step 1", expected: "Updated Expected 1" },
+				{ content: "Updated Step 2", expected: "Updated Expected 2" },
+			],
+		};
+
+		// Test method
+		const result = await client.cases.updateCase(1, caseData);
+
+		// Verify axios post was called correctly
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/update_case/1",
+			caseData,
+		);
+
+		// Verify result
+		expect(result).toEqual(mockCase);
+		expect(result.template_id).toBe(2);
+		expect(result.custom_steps_separated).toEqual([
+			{ content: "Updated Step 1", expected: "Updated Expected 1" },
+			{ content: "Updated Step 2", expected: "Updated Expected 2" },
+		]);
+	});
+
+	it("rejects invalid data when updating a test case", async () => {
+		// Test data with invalid types
+		const invalidCaseData = {
+			title: null, // should be string or undefined
+			priority_id: "high", // should be number
+			custom_steps_separated: "invalid", // should be array
+		} as any;
+
+		// Test method should throw validation error
+		await expect(client.cases.updateCase(1, invalidCaseData)).rejects.toThrow();
+
+		// Verify axios post was not called
+		expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+	});
+
+	it("updates multiple test cases with template_id and custom_steps_separated", async () => {
+		// Mock successful update (no response data)
+		mockAxiosInstance.post.mockResolvedValue({ data: {} });
+
+		// Test data with template_id and custom_steps_separated (typed)
+		const caseData = {
+			template_id: 2,
+			custom_steps_separated: [
+				{ content: "Bulk Step 1", expected: "Bulk Expected 1" },
+				{ content: "Bulk Step 2", expected: "Bulk Expected 2" },
+			],
+		};
+		const caseIds = [1, 2, 3];
+
+		// Test method
+		await client.cases.updateCases(1, 900, caseData, caseIds); // projectId: 1, suiteId: 900
+
+		// Verify axios post was called correctly
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/update_cases/900",
+			{
+				...caseData,
+				case_ids: caseIds,
+			},
+		);
+	});
+
+	it("rejects invalid data when updating multiple test cases", async () => {
+		// Test data with invalid types
+		const invalidCaseData = {
+			template_id: "two", // should be number
+			custom_steps_separated: [
+				{ content: 123, expected: "Expected 1" }, // content should be string
+			],
+		} as any;
+		const caseIds = [1, 2, 3];
+
+		// Test method should throw validation error
+		await expect(
+			client.cases.updateCases(1, 1, invalidCaseData, caseIds),
+		).rejects.toThrow();
+
+		// Verify axios post was not called
+		expect(mockAxiosInstance.post).not.toHaveBeenCalled();
+	});
+
+	// TestRail returns HTTP 500 (but still creates/updates the record) when a
+	// required multi-select custom field is present. These assert the recovery path.
+	it("recovers the created case when addCase gets a spurious 500", async () => {
+		const createdCase = {
+			id: 42,
+			title: "Multi-select case",
+			section_id: 5,
+			custom_platform: [4],
+		};
+		const error500 = {
+			response: {
+				status: 500,
+				data: { error: "An unexpected error occurred." },
+			},
+		};
+		// add_case POST fails with 500...
+		mockAxiosInstance.post.mockRejectedValue(error500);
+		// ...recovery walks section -> suite -> cases and finds the created case.
+		mockAxiosInstance.get
+			.mockResolvedValueOnce({ data: { suite_id: 7 } }) // get_section
+			.mockResolvedValueOnce({ data: { project_id: 3 } }) // get_suite
+			.mockResolvedValueOnce({
+				data: { cases: [{ ...createdCase, id: 40 }, createdCase] },
+			}); // get_cases -> newest (id 42) wins
+
+		const result = await client.cases.addCase(5, {
+			title: "Multi-select case",
+			custom_platform: [4],
+		});
+
+		expect(result).toEqual(createdCase);
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith("/api/v2/get_cases/3", {
+			params: { suite_id: 7, section_id: 5, limit: 250 },
+		});
+	});
+
+	it("re-throws when addCase 500s and no matching case is found", async () => {
+		const error500 = {
+			response: {
+				status: 500,
+				data: { error: "An unexpected error occurred." },
+			},
+		};
+		mockAxiosInstance.post.mockRejectedValue(error500);
+		mockAxiosInstance.get
+			.mockResolvedValueOnce({ data: { suite_id: 7 } })
+			.mockResolvedValueOnce({ data: { project_id: 3 } })
+			.mockResolvedValueOnce({ data: { cases: [] } }); // no match
+
+		await expect(
+			client.cases.addCase(5, {
+				title: "Multi-select case",
+				custom_platform: [4],
+			}),
+		).rejects.toThrow();
+	});
+
+	it("recovers the updated case when updateCase gets a spurious 500", async () => {
+		const updatedCase = { id: 9, title: "Updated", custom_platform: [1, 4] };
+		const error500 = {
+			response: {
+				status: 500,
+				data: { error: "An unexpected error occurred." },
+			},
+		};
+		mockAxiosInstance.post.mockRejectedValue(error500);
+		// recovery re-fetches the case by id (exact, no heuristic).
+		mockAxiosInstance.get.mockResolvedValueOnce({ data: updatedCase });
+
+		const result = await client.cases.updateCase(9, {
+			custom_platform: [1, 4],
+		});
+
+		expect(result).toEqual(updatedCase);
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith("/api/v2/get_case/9");
+	});
+
+	it("updates multiple cases without a project id (issue #14)", async () => {
+		// update_cases keys off the suite id alone, so projectId is optional.
+		mockAxiosInstance.post.mockResolvedValue({ data: {} });
+
+		await client.cases.updateCases(
+			undefined,
+			901,
+			{ custom_automation_type_new: 7 },
+			[1, 2],
+		);
+
+		expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+			"/api/v2/update_cases/901",
+			{
+				custom_automation_type_new: 7,
+				case_ids: [1, 2],
+			},
+		);
+	});
+
+	it("fetches several cases at once and reports the missing ones", async () => {
+		const first = { id: 1, title: "First" };
+		const third = { id: 3, title: "Third" };
+		// axios rejects with an Error carrying .response, so the mock does too:
+		// status-dependent logic cannot see the status on a plain object.
+		const notFound = Object.assign(new Error("Not found"), {
+			response: { status: 404, data: { error: "Not found" } },
+		});
+		mockAxiosInstance.get.mockImplementation((url) => {
+			if (url === "/api/v2/get_case/1") return Promise.resolve({ data: first });
+			if (url === "/api/v2/get_case/3") return Promise.resolve({ data: third });
+			return Promise.reject(notFound);
+		});
+
+		const result = await client.cases.getCasesByIds([1, 2, 3]);
+
+		expect(result.cases).toEqual([first, third]);
+		expect(result.notFound).toEqual([2]);
+	});
+
+	it("rethrows a non-404 instead of reporting it missing", async () => {
+		const serverError = Object.assign(new Error("boom"), {
+			response: { status: 500, data: { error: "boom" } },
+		});
+		mockAxiosInstance.get.mockRejectedValue(serverError);
+
+		await expect(client.cases.getCasesByIds([1])).rejects.toThrow(
+			/Failed to get test case 1/,
+		);
+	});
+
+	it("fetches the resolveCase lookup tables from the right endpoints", async () => {
+		mockAxiosInstance.get.mockImplementation((url) => {
+			if (url === "/api/v2/get_priorities")
+				return Promise.resolve({ data: [{ id: 2, name: "Medium" }] });
+			if (url === "/api/v2/get_statuses")
+				return Promise.resolve({ data: [{ id: 1, name: "Passed" }] });
+			if (url === "/api/v2/get_templates/24")
+				return Promise.resolve({ data: [{ id: 4, name: "BDD" }] });
+			return Promise.reject(new Error(`unexpected GET ${url}`));
+		});
+
+		await expect(client.cases.getPriorities()).resolves.toEqual([
+			{ id: 2, name: "Medium" },
+		]);
+		await expect(client.cases.getStatuses()).resolves.toEqual([
+			{ id: 1, name: "Passed" },
+		]);
+		await expect(client.cases.getTemplates(24)).resolves.toEqual([
+			{ id: 4, name: "BDD" },
+		]);
+	});
+
+	it("lists a case's attachments", async () => {
+		const payload = {
+			attachments: [{ id: 11, name: "fail.png" }],
+			limit: 250,
+			offset: 0,
+			size: 1,
+			_links: { next: null, prev: null },
+		};
+		mockAxiosInstance.get.mockResolvedValue({ data: payload });
+
+		await expect(client.cases.getAttachmentsForCase(7)).resolves.toEqual(
+			payload,
+		);
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+			"/api/v2/get_attachments_for_case/7",
+		);
+	});
+
+	it("downloads an attachment as base64", async () => {
+		mockAxiosInstance.get.mockResolvedValue({ data: Buffer.from("bytes") });
+
+		await expect(client.cases.getAttachment(11)).resolves.toEqual({
+			attachmentId: 11,
+			contentBase64: Buffer.from("bytes").toString("base64"),
+		});
+		expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+			"/api/v2/get_attachment/11",
+			{ responseType: "arraybuffer" },
+		);
+	});
+
+	it("refuses an oversized attachment instead of truncating it", async () => {
+		mockAxiosInstance.get.mockResolvedValue({
+			data: Buffer.alloc(6 * 1024 * 1024),
+		});
+
+		await expect(client.cases.getAttachment(11)).rejects.toThrow(
+			/over the 5MB inline limit/,
+		);
+	});
+
+	it("uploads a file to a case", async () => {
+		const { writeFile, unlink } = await import("node:fs/promises");
+		const { tmpdir } = await import("node:os");
+		const { join } = await import("node:path");
+		const file = join(tmpdir(), `mcp-testrail-attach-${Date.now()}.txt`);
+		await writeFile(file, "evidence");
+		try {
+			mockAxiosInstance.post.mockResolvedValue({ data: { id: 12 } });
+
+			await expect(client.cases.addAttachmentToCase(7, file)).resolves.toEqual({
+				id: 12,
+			});
+			expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+				"/api/v2/add_attachment_to_case/7",
+				expect.anything(),
+				expect.anything(),
+			);
+		} finally {
+			await unlink(file);
+		}
+	});
 });

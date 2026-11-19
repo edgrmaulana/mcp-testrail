@@ -4,16 +4,25 @@ import {
 	createSuccessResponse,
 	createErrorResponse,
 	createPagination,
+	formatErrorMessage,
+	paginateArray,
 	registerStrictTool,
 } from "./utils.js";
+import type { TestRailSection } from "../../shared/schemas/sections.js";
+import type { TestRailCaseField } from "../../shared/schemas/cases.js";
 import {
 	getTestCaseSchema,
 	getTestCasesSchema,
+	getAttachmentsForCaseSchema,
+	getAttachmentSchema,
+	addAttachmentToCaseSchema,
 	addTestCaseSchema,
 	updateTestCaseSchema,
 	deleteTestCaseSchema,
 	getTestCaseTypesSchema,
 	getTestCaseFieldsSchema,
+	getCasesByIdsSchema,
+	resolveCaseSchema,
 	copyTestCasesToSectionSchema,
 	moveTestCasesToSectionSchema,
 	getTestCaseHistorySchema,
@@ -22,6 +31,112 @@ import {
 	addBddSchema,
 	getBddSchema,
 } from "../../shared/schemas/cases.js";
+
+/**
+ * When TestRail rejects a write over an unknown custom field, names the
+ * valid fields so the caller can fix the call instead of guessing. Returns
+ * null for any other error, keeping the original message untouched.
+ * @param error The write failure, only read when it names an invalid field
+ * @param fetchFields How to list the known field definitions
+ * @returns The active custom field names, or null when not applicable
+ */
+export async function invalidFieldHint(
+	error: unknown,
+	fetchFields: () => Promise<{ system_name: string; is_active: boolean }[]>,
+): Promise<string[] | null> {
+	if (!/not a valid field/i.test(formatErrorMessage(error))) return null;
+	try {
+		const fields = await fetchFields();
+		return fields.filter((f) => f.is_active).map((f) => f.system_name);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Parses a dropdown option list from a case-field config. TestRail serializes
+ * items as one option per line ("1, Open" or "1: Open"); both read the same.
+ * Lines that do not start with a number are ignored, so text formats that
+ * share the field never parse into false options.
+ * @param items The raw options.items string from the field config
+ * @returns Option id to label
+ */
+export function parseOptionItems(items: string): Map<number, string> {
+	const names = new Map<number, string>();
+	for (const line of items.split("\n")) {
+		const match =
+			/^(\d+)\s*[:,\-]\s*(.+?)\s*$/.exec(line) ??
+			/^(\d+)\s+(.+?)\s*$/.exec(line);
+		if (match) names.set(Number(match[1]), match[2]);
+	}
+	return names;
+}
+
+/**
+ * Decodes project-scoped custom dropdown values into {id, name} pairs, the
+ * same shape as the built-in type/priority/template decodes. Option lists
+ * differ per project (and per template), so the applicable config is picked
+ * the way TestRail picks it: the project-scoped config wins over the global
+ * default, on a field active for this template. Fields without options, or
+ * values with no options to match, are left out rather than guessed.
+ * @param caseFields Field definitions from getCaseFields
+ * @param testCase The case whose custom_* values to decode
+ * @param projectId Owning project, from the suite when known
+ * @returns Decoded custom values keyed by field name
+ */
+export function decodeCustomOptions(
+	caseFields: TestRailCaseField[],
+	testCase: TestRailCase,
+	projectId?: number,
+): Record<string, unknown> {
+	// SAFETY: TestRailCase is a flat JSON object; the record view only reads custom_* keys and template_id.
+	const record = testCase as unknown as Record<string, unknown>;
+	const decoded: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(record)) {
+		if (!key.startsWith("custom_") || value === null || value === undefined) {
+			continue;
+		}
+		const field = caseFields.find((f) => f.system_name === key);
+		const templateIds = field?.template_ids ?? [];
+		if (
+			!field ||
+			(templateIds.length > 0 && !templateIds.includes(testCase.template_id))
+		) {
+			continue;
+		}
+		const configs = field.configs ?? [];
+		const config =
+			(projectId !== undefined &&
+				configs.find((c) => c.context.project_ids.includes(projectId))) ||
+			configs.find((c) => c.context.is_global);
+		if (!config) continue;
+		const names = parseOptionItems(config.options?.items ?? "");
+		if (names.size === 0) continue;
+		const decode = (id: unknown) =>
+			typeof id === "number" ? { id, name: names.get(id) ?? null } : id;
+		decoded[key] = Array.isArray(value) ? value.map(decode) : decode(value);
+	}
+	return decoded;
+}
+
+/**
+ * Keeps only the requested keys. Unknown keys are ignored, so a typo degrades
+ * to a smaller object rather than an error; the caller asked for less data.
+ * @param obj The full object TestRail returned
+ * @param fields Keys to keep, e.g. ["id","title","refs"]
+ * @returns The object with only those keys that were present
+ */
+export function selectFields(
+	obj: Record<string, unknown>,
+	fields?: string[],
+): Record<string, unknown> {
+	if (!fields || fields.length === 0) return obj;
+	const picked: Record<string, unknown> = {};
+	for (const key of fields) {
+		if (key in obj) picked[key] = obj[key];
+	}
+	return picked;
+}
 
 type ColumnName = keyof TestRailCase;
 
@@ -171,17 +286,22 @@ export function registerCaseTools(
 		"Retrieves complete details for a single test case including steps, expected results, and prerequisites. REQUIRED: caseId.",
 		{
 			caseId: getTestCaseSchema.shape.caseId,
+			fields: getTestCaseSchema.shape.fields,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
-				const { caseId } = args;
+				const { caseId, fields } = args;
 				const testCase = await testRailClient.cases.getCase(caseId);
 
 				// Return full case data for individual case requests
 				const successResponse = createSuccessResponse(
 					"Test case retrieved successfully",
 					{
-						case: testCase,
+						case: selectFields(
+							// SAFETY: TestRailCase is a flat JSON object; treating it as a string-keyed record only reads keys.
+							testCase as unknown as Record<string, unknown>,
+							fields,
+						),
 					},
 				);
 				return successResponse;
@@ -215,8 +335,9 @@ export function registerCaseTools(
 			typeId: getTestCasesSchema.shape.typeId,
 			updatedBy: getTestCasesSchema.shape.updatedBy,
 			labelId: getTestCasesSchema.shape.labelId,
+			fields: getTestCasesSchema.shape.fields,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const {
 					projectId,
@@ -233,6 +354,7 @@ export function registerCaseTools(
 					typeId,
 					updatedBy,
 					labelId,
+					fields,
 				} = args;
 
 				// Build params object with clean direct parameter mapping
@@ -257,9 +379,19 @@ export function registerCaseTools(
 					params,
 				);
 
-				// Reduce the bodies to keep the response small
+				// Reduce the bodies to keep the response small. An explicit fields
+				// list bypasses the reduction: the caller asked for those keys.
 				const responseData = testCases.cases.map((testCase) =>
-					filterCaseColumns(testCase as unknown as Record<string, unknown>),
+					fields && fields.length > 0
+						? selectFields(
+								// SAFETY: TestRailCase is a flat JSON object; reading it as a string-keyed record only reads keys.
+								testCase as unknown as Record<string, unknown>,
+								fields,
+							)
+						: filterCaseColumns(
+								// SAFETY: TestRailCase is a flat JSON object; reading it as a string-keyed record only reads keys.
+								testCase as unknown as Record<string, unknown>,
+							),
 				);
 
 				const successResponse = createSuccessResponse(
@@ -300,7 +432,7 @@ export function registerCaseTools(
 			customStepsSeparated: addTestCaseSchema.shape.customStepsSeparated,
 			customFields: addTestCaseSchema.shape.customFields,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { sectionId } = args;
 				const data = buildCasePayload(args);
@@ -314,8 +446,13 @@ export function registerCaseTools(
 				);
 				return successResponse;
 			} catch (error) {
+				const valid = await invalidFieldHint(error, () =>
+					testRailClient.cases.getCaseFields(),
+				);
 				const errorResponse = createErrorResponse(
-					`Error creating test case in section ${args.sectionId}`,
+					valid
+						? `Error creating test case in section ${args.sectionId} (valid custom fields: ${valid.join(", ")})`
+						: `Error creating test case in section ${args.sectionId}`,
 					error,
 				);
 				return errorResponse;
@@ -343,7 +480,7 @@ export function registerCaseTools(
 			customStepsSeparated: updateTestCaseSchema.shape.customStepsSeparated,
 			customFields: updateTestCaseSchema.shape.customFields,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { caseId } = args;
 				const data = buildCasePayload(args);
@@ -357,8 +494,13 @@ export function registerCaseTools(
 				);
 				return successResponse;
 			} catch (error) {
+				const valid = await invalidFieldHint(error, () =>
+					testRailClient.cases.getCaseFields(),
+				);
 				const errorResponse = createErrorResponse(
-					`Error updating test case ${args.caseId}`,
+					valid
+						? `Error updating test case ${args.caseId} (valid custom fields: ${valid.join(", ")})`
+						: `Error updating test case ${args.caseId}`,
 					error,
 				);
 				return errorResponse;
@@ -370,11 +512,21 @@ export function registerCaseTools(
 	registerStrictTool(
 		server,
 		"deleteCase",
-		"Deletes a test case from TestRail",
-		{ caseId: deleteTestCaseSchema.shape.caseId },
-		async (args, extra) => {
+		"Deletes a test case from TestRail. Pass dryRun to preview instead.",
+		{
+			caseId: deleteTestCaseSchema.shape.caseId,
+			dryRun: deleteTestCaseSchema.shape.dryRun,
+		},
+		async (args) => {
 			try {
-				const { caseId } = args;
+				const { caseId, dryRun } = args;
+				if (dryRun) {
+					const testCase = await testRailClient.cases.getCase(caseId);
+					return createSuccessResponse(
+						`Dry run: test case ${caseId} would be deleted (nothing changed)`,
+						{ case: { id: testCase.id, title: testCase.title } },
+					);
+				}
 				await testRailClient.cases.deleteCase(caseId);
 				const successResponse = createSuccessResponse(
 					`Test case ${caseId} deleted successfully`,
@@ -394,15 +546,24 @@ export function registerCaseTools(
 	registerStrictTool(
 		server,
 		"getCaseTypes",
-		"Retrieves all available test case types in TestRail",
-		{},
-		async (args, extra) => {
+		"Retrieves all available test case types in TestRail. OPTIONAL: limit, offset; repeat with offset advanced by limit while pagination.hasMore is true.",
+		{
+			limit: getTestCaseTypesSchema.shape.limit,
+			offset: getTestCaseTypesSchema.shape.offset,
+		},
+		async (args) => {
 			try {
 				const caseTypes = await testRailClient.cases.getCaseTypes();
+				const { page, pagination } = paginateArray(
+					caseTypes,
+					args.limit,
+					args.offset,
+				);
 				const successResponse = createSuccessResponse(
 					"Test case types retrieved successfully",
 					{
-						caseTypes,
+						caseTypes: page,
+						pagination,
 					},
 				);
 				return successResponse;
@@ -420,15 +581,44 @@ export function registerCaseTools(
 	registerStrictTool(
 		server,
 		"getCaseFields",
-		"Retrieves all available test case fields in TestRail",
-		{},
-		async (args, extra) => {
+		"Retrieves all available test case fields in TestRail. Use namesOnly for a ~1KB name list, or fields to pick keys per definition. namesOnly takes precedence when both are given.",
+		{
+			namesOnly: getTestCaseFieldsSchema.shape.namesOnly,
+			fields: getTestCaseFieldsSchema.shape.fields,
+			limit: getTestCaseFieldsSchema.shape.limit,
+			offset: getTestCaseFieldsSchema.shape.offset,
+		},
+		async (args) => {
 			try {
+				const { namesOnly, fields, limit, offset } = args;
 				const caseFields = await testRailClient.cases.getCaseFields();
+				if (namesOnly) {
+					const { page, pagination } = paginateArray(
+						caseFields.map((f) => f.system_name),
+						limit,
+						offset,
+					);
+					return createSuccessResponse(
+						"Test case field names retrieved successfully",
+						{ fieldNames: page, pagination },
+					);
+				}
+				const narrowed =
+					fields && fields.length > 0
+						? caseFields.map((f) =>
+								selectFields(
+									// SAFETY: field definitions are flat JSON objects; reading them as string-keyed records only reads keys.
+									f as unknown as Record<string, unknown>,
+									fields,
+								),
+							)
+						: caseFields;
+				const { page, pagination } = paginateArray(narrowed, limit, offset);
 				const successResponse = createSuccessResponse(
 					"Test case fields retrieved successfully",
 					{
-						caseFields,
+						caseFields: page,
+						pagination,
 					},
 				);
 				return successResponse;
@@ -442,18 +632,155 @@ export function registerCaseTools(
 		},
 	);
 
+	// Fetch several cases in one tool call
+	registerStrictTool(
+		server,
+		"getCasesByIds",
+		"Fetches several test cases in one call. Prefer this over N getCase calls when reconciling id lists.",
+		{
+			caseIds: getCasesByIdsSchema.shape.caseIds,
+			fields: getCasesByIdsSchema.shape.fields,
+		},
+		async (args) => {
+			try {
+				const { caseIds, fields } = args;
+				const { cases, notFound } =
+					await testRailClient.cases.getCasesByIds(caseIds);
+				return createSuccessResponse("Test cases retrieved successfully", {
+					cases: cases.map((c) =>
+						selectFields(
+							// SAFETY: TestRailCase is a flat JSON object; reading it as a string-keyed record only reads keys.
+							c as unknown as Record<string, unknown>,
+							fields,
+						),
+					),
+					notFound,
+				});
+			} catch (error) {
+				return createErrorResponse("Error fetching test cases", error);
+			}
+		},
+	);
+
+	// Decode a case's ids into names plus its location path
+	registerStrictTool(
+		server,
+		"resolveCase",
+		"Returns a case with its ids decoded into names: project/suite/section path, type, priority, template and status. Use when the raw payload's numeric ids are opaque.",
+		{
+			caseId: resolveCaseSchema.shape.caseId,
+		},
+		async (args) => {
+			try {
+				const testCase = await testRailClient.cases.getCase(args.caseId);
+				const byId = (rows: { id: number; name: string }[] | null) => {
+					const names: Record<number, string> = {};
+					for (const r of rows ?? []) names[r.id] = r.name;
+					return names;
+				};
+				// Each lookup is best-effort: an id without a resolved name
+				// still returns the id, so one failed lookup never fails the call.
+				// The case payload carries suite_id but no project_id, so the
+				// project comes from the suite's project_id.
+				const [suite, types, priorities, statuses, caseFields] =
+					await Promise.all([
+						testRailClient.suites.getSuite(testCase.suite_id).catch(() => null),
+						testRailClient.cases.getCaseTypes().catch(() => null),
+						testRailClient.cases.getPriorities().catch(() => null),
+						testRailClient.cases.getStatuses().catch(() => null),
+						testRailClient.cases.getCaseFields().catch(() => null),
+					]);
+				const projectId = suite?.project_id;
+				const [project, templates] =
+					projectId === undefined
+						? [null, null]
+						: await Promise.all([
+								testRailClient.projects.getProject(projectId).catch(() => null),
+								testRailClient.cases.getTemplates(projectId).catch(() => null),
+							]);
+				// Walk the section chain to build the location path. The seen
+				// set stops a corrupt parent cycle from looping forever.
+				const sectionPath: { id: number; name: string }[] = [];
+				const seenSections = new Set<number>();
+				let sectionId: number | undefined = testCase.section_id;
+				while (sectionId !== undefined && !seenSections.has(sectionId)) {
+					seenSections.add(sectionId);
+					const currentId: number = sectionId;
+					const section: TestRailSection | null = await testRailClient.sections
+						.getSection(currentId)
+						.catch(() => null);
+					if (!section) break;
+					sectionPath.unshift({ id: section.id, name: section.name });
+					sectionId = section.parent_id ?? undefined;
+				}
+				const typeNames = byId(types);
+				const priorityNames = byId(priorities);
+				const statusNames = byId(statuses);
+				const templateNames = byId(templates);
+				const custom =
+					caseFields === null
+						? {}
+						: decodeCustomOptions(caseFields, testCase, projectId);
+				return createSuccessResponse("Test case resolved successfully", {
+					resolved: {
+						id: testCase.id,
+						title: testCase.title,
+						project: project
+							? { id: project.id, name: project.name }
+							: undefined,
+						suite: suite ? { id: suite.id, name: suite.name } : undefined,
+						section_path: sectionPath,
+						type: {
+							id: testCase.type_id,
+							name: typeNames[testCase.type_id] ?? null,
+						},
+						priority: {
+							id: testCase.priority_id,
+							name: priorityNames[testCase.priority_id] ?? null,
+						},
+						template: {
+							id: testCase.template_id,
+							name: templateNames[testCase.template_id] ?? null,
+						},
+						status:
+							testCase.status_id !== undefined
+								? {
+										id: testCase.status_id,
+										name: statusNames[testCase.status_id] ?? null,
+									}
+								: undefined,
+						custom,
+						case: testCase,
+					},
+				});
+			} catch (error) {
+				return createErrorResponse(
+					`Error resolving test case ${args.caseId}`,
+					error,
+				);
+			}
+		},
+	);
+
 	// Copy test cases to section
 	registerStrictTool(
 		server,
 		"copyToSection",
-		"Copies specified test cases to a target section while keeping the originals",
+		"Copies specified test cases to a target section while keeping the originals. Pass dryRun to preview instead.",
 		{
 			caseIds: copyTestCasesToSectionSchema.shape.caseIds,
 			sectionId: copyTestCasesToSectionSchema.shape.sectionId,
+			dryRun: copyTestCasesToSectionSchema.shape.dryRun,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
-				const { caseIds, sectionId } = args;
+				const { caseIds, sectionId, dryRun } = args;
+				if (dryRun) {
+					return createSuccessResponse(
+						`Dry run: ${caseIds.length} test case(s) would be copied to section ${sectionId} (nothing changed)`,
+						{ caseIds, sectionId, count: caseIds.length },
+					);
+				}
 				const result = await testRailClient.cases.copyToSection(
 					caseIds,
 					sectionId,
@@ -479,14 +806,21 @@ export function registerCaseTools(
 	registerStrictTool(
 		server,
 		"moveToSection",
-		"Moves specified test cases to a target section",
+		"Moves specified test cases to a target section. Pass dryRun to preview instead.",
 		{
 			caseIds: moveTestCasesToSectionSchema.shape.caseIds,
 			sectionId: moveTestCasesToSectionSchema.shape.sectionId,
+			dryRun: moveTestCasesToSectionSchema.shape.dryRun,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
-				const { caseIds, sectionId } = args;
+				const { caseIds, sectionId, dryRun } = args;
+				if (dryRun) {
+					return createSuccessResponse(
+						`Dry run: ${caseIds.length} test case(s) would be moved to section ${sectionId} (nothing changed)`,
+						{ caseIds, sectionId, count: caseIds.length },
+					);
+				}
 				const result = await testRailClient.cases.moveToSection(
 					caseIds,
 					sectionId,
@@ -514,7 +848,7 @@ export function registerCaseTools(
 		"getCaseHistory",
 		"Retrieves the change history of a test case including updates to fields and custom fields",
 		{ caseId: getTestCaseHistorySchema.shape.caseId },
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { caseId } = args;
 				const history = await testRailClient.cases.getCaseHistory(caseId);
@@ -556,13 +890,20 @@ export function registerCaseTools(
 			customExpected: updateTestCasesSchema.shape.customExpected,
 			customStepsSeparated: updateTestCasesSchema.shape.customStepsSeparated,
 			customFields: updateTestCasesSchema.shape.customFields,
+			dryRun: updateTestCasesSchema.shape.dryRun,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
-				const { projectId, suiteId, caseIds } = args;
+				const { projectId, suiteId, caseIds, dryRun } = args;
 
 				const data = buildCasePayload(args);
 
+				if (dryRun) {
+					return createSuccessResponse(
+						`Dry run: ${caseIds.length} test case(s) would be updated with ${Object.keys(data).length} field(s) (nothing changed)`,
+						{ caseIds, count: caseIds.length, payload: data },
+					);
+				}
 				await testRailClient.cases.updateCases(
 					projectId,
 					suiteId,
@@ -574,8 +915,13 @@ export function registerCaseTools(
 				);
 				return successResponse;
 			} catch (error) {
+				const valid = await invalidFieldHint(error, () =>
+					testRailClient.cases.getCaseFields(),
+				);
 				const errorResponse = createErrorResponse(
-					`Error updating test cases in suite ${args.suiteId}`,
+					valid
+						? `Error updating test cases in suite ${args.suiteId} (valid custom fields: ${valid.join(", ")})`
+						: `Error updating test cases in suite ${args.suiteId}`,
 					error,
 				);
 				return errorResponse;
@@ -592,7 +938,7 @@ export function registerCaseTools(
 			sectionId: addBddSchema.shape.sectionId,
 			featureContent: addBddSchema.shape.featureContent,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { sectionId, featureContent } = args;
 				const result = await testRailClient.cases.addBdd(
@@ -622,7 +968,7 @@ export function registerCaseTools(
 		{
 			caseId: getBddSchema.shape.caseId,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { caseId } = args;
 				const result = await testRailClient.cases.getBdd(caseId);
@@ -637,6 +983,91 @@ export function registerCaseTools(
 					error,
 				);
 				return errorResponse;
+			}
+		},
+	);
+
+	// List a case's attachments
+	registerStrictTool(
+		server,
+		"getAttachmentsForCase",
+		"Lists the files attached to a test case (screenshots, fixtures). REQUIRED: caseId. OPTIONAL: limit, offset; repeat with offset advanced by limit while pagination.hasMore is true.",
+		{
+			caseId: getAttachmentsForCaseSchema.shape.caseId,
+			limit: getAttachmentsForCaseSchema.shape.limit,
+			offset: getAttachmentsForCaseSchema.shape.offset,
+		},
+		async (args) => {
+			try {
+				const envelope = await testRailClient.cases.getAttachmentsForCase(
+					args.caseId,
+				);
+				const { page, pagination } = paginateArray(
+					envelope.attachments,
+					args.limit,
+					args.offset,
+				);
+				return createSuccessResponse("Attachments retrieved successfully", {
+					attachments: page,
+					pagination,
+				});
+			} catch (error) {
+				return createErrorResponse(
+					`Error fetching attachments for case ${args.caseId}`,
+					error,
+				);
+			}
+		},
+	);
+
+	// Download one attachment as base64
+	registerStrictTool(
+		server,
+		"getAttachment",
+		"Downloads one attachment, returned as base64 for the caller to save. REQUIRED: attachmentId.",
+		{
+			attachmentId: getAttachmentSchema.shape.attachmentId,
+		},
+		async (args) => {
+			try {
+				const attachment = await testRailClient.cases.getAttachment(
+					args.attachmentId,
+				);
+				return createSuccessResponse("Attachment retrieved successfully", {
+					attachment,
+				});
+			} catch (error) {
+				return createErrorResponse(
+					`Error fetching attachment ${args.attachmentId}`,
+					error,
+				);
+			}
+		},
+	);
+
+	// Upload a file to a case
+	registerStrictTool(
+		server,
+		"addAttachmentToCase",
+		"Uploads a file from the server host to a test case, where it becomes visible to anyone with case access. Only attach files meant to be published there. REQUIRED: caseId, filePath (absolute path the server can read).",
+		{
+			caseId: addAttachmentToCaseSchema.shape.caseId,
+			filePath: addAttachmentToCaseSchema.shape.filePath,
+		},
+		async (args) => {
+			try {
+				const attachment = await testRailClient.cases.addAttachmentToCase(
+					args.caseId,
+					args.filePath,
+				);
+				return createSuccessResponse("Attachment uploaded successfully", {
+					attachment,
+				});
+			} catch (error) {
+				return createErrorResponse(
+					`Error uploading attachment to case ${args.caseId}`,
+					error,
+				);
 			}
 		},
 	);

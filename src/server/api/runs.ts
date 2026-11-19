@@ -3,6 +3,7 @@ import { TestRailClient } from "../../client/api/index.js";
 import {
 	createSuccessResponse,
 	createErrorResponse,
+	paginateArray,
 	registerStrictTool,
 } from "./utils.js";
 import {
@@ -10,6 +11,9 @@ import {
 	getRunSchema,
 	addRunSchema,
 	updateRunSchema,
+	closeRunSchema,
+	getConfigurationsSchema,
+	deleteRunSchema,
 } from "../../shared/schemas/runs.js";
 
 /**
@@ -175,6 +179,75 @@ export function registerRunTools(
 					error,
 				);
 				return errorResponse;
+			}
+		},
+	);
+
+	// Delete a test run
+	registerStrictTool(
+		server,
+		"deleteRun",
+		"Deletes a test run, which cannot be undone. Pass dryRun to preview instead.",
+		deleteRunSchema,
+		async ({ runId, dryRun }) => {
+			try {
+				if (dryRun) {
+					const run = await testRailClient.runs.getRun(runId);
+					return createSuccessResponse(
+						`Dry run: test run ${runId} would be deleted (nothing changed)`,
+						{ run: { id: run.id, name: run.name } },
+					);
+				}
+				await testRailClient.runs.deleteRun(runId);
+				return createSuccessResponse(`Test run ${runId} deleted successfully`);
+			} catch (error) {
+				return createErrorResponse(`Error deleting test run ${runId}`, error);
+			}
+		},
+	);
+
+	// Close a test run
+	registerStrictTool(
+		server,
+		"closeRun",
+		"Closes a test run. Reversible, unlike deleteRun — prefer this to retire CI runs.",
+		closeRunSchema,
+		async ({ runId }) => {
+			try {
+				const run = await testRailClient.runs.closeRun(runId);
+				return createSuccessResponse(`Test run ${runId} closed successfully`, {
+					run,
+				});
+			} catch (error) {
+				return createErrorResponse(`Error closing test run ${runId}`, error);
+			}
+		},
+	);
+
+	// List a project's configuration groups
+	registerStrictTool(
+		server,
+		"getConfigurations",
+		"Lists a project's configuration groups: the matrices whose ids addRun accepts as configIds. OPTIONAL: limit, offset; repeat with offset advanced by limit while pagination.hasMore is true.",
+		getConfigurationsSchema,
+		async ({ projectId, limit, offset }) => {
+			try {
+				const configurations =
+					await testRailClient.runs.getConfigurations(projectId);
+				const { page, pagination } = paginateArray(
+					configurations,
+					limit,
+					offset,
+				);
+				return createSuccessResponse("Configurations retrieved successfully", {
+					configurations: page,
+					pagination,
+				});
+			} catch (error) {
+				return createErrorResponse(
+					`Error fetching configurations for project ${projectId}`,
+					error,
+				);
 			}
 		},
 	);

@@ -95,6 +95,25 @@ export interface TestRailClientConfig {
 export class BaseTestRailClient {
 	protected client: AxiosInstance;
 	protected readonly maxRetries: number;
+	// Process-wide throttle telemetry: every sub-client retries through the
+	// same interceptor, so per-instance counters would always read zero on
+	// the instance the caller holds. Static keeps one true total instead.
+	private static throttledRequests = 0;
+	private static totalThrottleDelayMs = 0;
+
+	/**
+	 * How many requests hit the 429 limiter and how long they waited, in
+	 * this process. Tells a slow bulk sweep apart from a throttled one.
+	 */
+	static getThrottleStats(): {
+		throttledRequests: number;
+		totalThrottleDelayMs: number;
+	} {
+		return {
+			throttledRequests: BaseTestRailClient.throttledRequests,
+			totalThrottleDelayMs: BaseTestRailClient.totalThrottleDelayMs,
+		};
+	}
 
 	constructor(config: TestRailClientConfig) {
 		const headers = {
@@ -150,6 +169,8 @@ export class BaseTestRailClient {
 		}
 
 		config.retryCount = attempt;
+		BaseTestRailClient.throttledRequests += 1;
+		BaseTestRailClient.totalThrottleDelayMs += delay;
 		await sleep(delay);
 
 		// Goes back through this interceptor, bounded by retryCount.

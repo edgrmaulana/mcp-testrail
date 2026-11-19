@@ -3,6 +3,7 @@ import { TestRailClient } from "../../client/api/index.js";
 import {
 	createSuccessResponse,
 	createErrorResponse,
+	paginateArray,
 	registerStrictTool,
 } from "./utils.js";
 import {
@@ -25,20 +26,24 @@ export function registerSuiteTools(
 	registerStrictTool(
 		server,
 		"getSuites",
-		"Retrieves all test suites for a specified TestRail project",
+		"Retrieves all test suites for a specified TestRail project. OPTIONAL: limit, offset; repeat with offset advanced by limit while pagination.hasMore is true.",
 		{
 			projectId: getSuitesSchema.shape.projectId.describe(
 				"TestRail Project ID to get suites from",
 			),
+			limit: getSuitesSchema.shape.limit,
+			offset: getSuitesSchema.shape.offset,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
-				const { projectId } = args;
+				const { projectId, limit, offset } = args;
 				const suites = await testRailClient.suites.getSuites(projectId);
+				const { page, pagination } = paginateArray(suites, limit, offset);
 				const successResponse = createSuccessResponse(
 					"Test suites retrieved successfully",
 					{
-						suites,
+						suites: page,
+						pagination,
 					},
 				);
 				return successResponse;
@@ -62,7 +67,7 @@ export function registerSuiteTools(
 				"TestRail Suite ID to retrieve",
 			),
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { suiteId } = args;
 				const suite = await testRailClient.suites.getSuite(suiteId);
@@ -97,7 +102,7 @@ export function registerSuiteTools(
 				"Description of the test suite (optional)",
 			),
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { projectId, name, description } = args;
 				const data = {
@@ -138,7 +143,7 @@ export function registerSuiteTools(
 				"New description for the test suite (optional)",
 			),
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { suiteId, name, description } = args;
 				const data: { name?: string; description?: string } = {};

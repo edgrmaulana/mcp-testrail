@@ -163,9 +163,9 @@ export function registerSectionTools(
 	registerStrictTool(
 		server,
 		"moveSection",
-		"Moves a section to a new position in the test hierarchy",
+		"Moves a section to a new position in the test hierarchy. Pass dryRun to preview instead.",
 		moveSectionSchema,
-		async ({ sectionId, parentId, afterId }) => {
+		async ({ sectionId, parentId, afterId, dryRun }) => {
 			try {
 				const moveData: {
 					parent_id?: number | null;
@@ -175,6 +175,12 @@ export function registerSectionTools(
 				if (parentId !== undefined) moveData.parent_id = parentId;
 				if (afterId !== undefined) moveData.after_id = afterId;
 
+				if (dryRun) {
+					return createSuccessResponse(
+						`Dry run: section ${sectionId} would be moved (nothing changed)`,
+						{ sectionId, ...moveData },
+					);
+				}
 				const section = await testRailClient.sections.moveSection(
 					sectionId,
 					moveData,

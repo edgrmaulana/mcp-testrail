@@ -8,6 +8,10 @@ import {
 	GetRunsInputType,
 	AddRunInputType,
 	UpdateRunInputType,
+	CloseRunInputType,
+	GetConfigurationsInputType,
+	DeleteRunInputType,
+	TestRailConfigurationGroup,
 } from "../../shared/schemas/runs.js";
 
 export class RunsClient extends BaseTestRailClient {
@@ -93,6 +97,59 @@ export class RunsClient extends BaseTestRailClient {
 			return response.data;
 		} catch (error) {
 			throw handleApiError(error, `Failed to update test run ${runId}`);
+		}
+	}
+
+	/**
+	 * Closes a test run. Reversible (a run can be reopened in TestRail),
+	 * so this is the safe way for automation to retire CI runs.
+	 * @param runId The ID of the test run
+	 * @returns Promise with the closed test run
+	 */
+	async closeRun(runId: CloseRunInputType["runId"]): Promise<TestRailRun> {
+		try {
+			const response: AxiosResponse<TestRailRun> = await this.client.post(
+				`/api/v2/close_run/${runId}`,
+				{},
+			);
+			return response.data;
+		} catch (error) {
+			throw handleApiError(error, `Failed to close test run ${runId}`);
+		}
+	}
+
+	/**
+	 * Lists a project's configuration groups: the matrices addRun's
+	 * configIds select from. Without this there is no way to resolve
+	 * which ids a run matrix needs.
+	 * @param projectId The ID of the project
+	 */
+	async getConfigurations(
+		projectId: GetConfigurationsInputType["projectId"],
+	): Promise<TestRailConfigurationGroup[]> {
+		try {
+			const response = await this.client.get<TestRailConfigurationGroup[]>(
+				`/api/v2/get_configs/${projectId}`,
+			);
+			return response.data;
+		} catch (error) {
+			throw handleApiError(
+				error,
+				`Failed to get configurations for project ${projectId}`,
+			);
+		}
+	}
+
+	/**
+	 * Deletes a test run. This cannot be undone; prefer closeRun-style
+	 * flows or dryRun previews before calling it from automation.
+	 * @param runId The ID of the test run
+	 */
+	async deleteRun(runId: DeleteRunInputType["runId"]): Promise<void> {
+		try {
+			await this.client.post(`/api/v2/delete_run/${runId}`, {});
+		} catch (error) {
+			throw handleApiError(error, `Failed to delete test run ${runId}`);
 		}
 	}
 

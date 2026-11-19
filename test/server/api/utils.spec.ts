@@ -3,6 +3,7 @@ import {
 	createSuccessResponse,
 	createErrorResponse,
 	createPagination,
+	paginateArray,
 } from "../../../src/server/api/utils.js";
 
 describe("server response helpers", () => {
@@ -22,6 +23,23 @@ describe("server response helpers", () => {
 		// The old bug: text was itself a {type,text} envelope needing a second parse.
 		expect(payload).not.toHaveProperty("type");
 		expect(payload).not.toHaveProperty("text");
+	});
+
+	it("adds a shrinking hint to oversized responses without touching data", () => {
+		const big = "x".repeat(40 * 1024);
+		const res = createSuccessResponse("Big", { big });
+		const text = (res.content as [{ text: string }])[0].text;
+		const payload = JSON.parse(text);
+
+		expect(payload.big).toBe(big);
+		expect(payload._sizeHint).toMatch(/fields/);
+	});
+
+	it("leaves small responses alone", () => {
+		const res = createSuccessResponse("Small", { id: 1 });
+		const text = (res.content as [{ text: string }])[0].text;
+
+		expect(JSON.parse(text)).not.toHaveProperty("_sizeHint");
 	});
 
 	it("flags errors with isError and a single-parse message", () => {
@@ -73,5 +91,30 @@ describe("createPagination", () => {
 		expect(createPagination({ limit: 50, offset: 0, size: 50 }).hasMore).toBe(
 			true,
 		);
+	});
+});
+
+describe("paginateArray", () => {
+	const rows = [1, 2, 3, 4, 5];
+
+	it("returns everything when no limit is given", () => {
+		expect(paginateArray(rows)).toEqual({
+			page: [1, 2, 3, 4, 5],
+			pagination: { limit: 5, offset: 0, count: 5, hasMore: false },
+		});
+	});
+
+	it("slices a middle page and reports more to come", () => {
+		expect(paginateArray(rows, 2, 2)).toEqual({
+			page: [3, 4],
+			pagination: { limit: 2, offset: 2, count: 2, hasMore: true },
+		});
+	});
+
+	it("reports the end of the list on a short final page", () => {
+		expect(paginateArray(rows, 2, 4)).toEqual({
+			page: [5],
+			pagination: { limit: 2, offset: 4, count: 1, hasMore: false },
+		});
 	});
 });

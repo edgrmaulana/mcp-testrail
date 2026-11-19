@@ -3,6 +3,7 @@ import { createServer, Server } from "node:http";
 import {
 	retryDelayMs,
 	MAX_RETRY_DELAY_MS,
+	BaseTestRailClient,
 } from "../../../src/client/api/baseClient.js";
 import { TestRailClient } from "../../../src/client/api/index.js";
 
@@ -92,6 +93,22 @@ describe("429 retry", () => {
 		);
 		// The first attempt plus two retries.
 		expect(paths.length).toBe(3);
+	});
+
+	it("counts throttled requests and their wait in the process stats", async () => {
+		const before = BaseTestRailClient.getThrottleStats();
+		const { port } = await stub([
+			RATE_LIMITED,
+			{ status: 200, body: { id: 605121, title: "Recovered" } },
+		]);
+
+		await clientFor(port).cases.getCase(605121);
+
+		const after = BaseTestRailClient.getThrottleStats();
+		expect(after.throttledRequests - before.throttledRequests).toBe(1);
+		expect(after.totalThrottleDelayMs).toBeGreaterThanOrEqual(
+			before.totalThrottleDelayMs,
+		);
 	});
 
 	it("does not retry a non-429 error", async () => {
