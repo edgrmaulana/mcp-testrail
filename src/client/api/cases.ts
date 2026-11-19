@@ -20,6 +20,7 @@ import {
 	CopyTestCasesToSectionInput,
 	MoveTestCasesToSectionInput,
 	GetTestCaseHistoryInput,
+	GetCasesByIdsInput,
 } from "../../shared/schemas/cases.js";
 
 interface GetCasesParams {
@@ -27,6 +28,11 @@ interface GetCasesParams {
 	offset?: number;
 	[key: string]: string | number | boolean | null | undefined;
 }
+
+// Inline base64 inflates bytes by a third and the host truncates past ~50KB,
+// so anything this big was never going to arrive intact. Refuse it instead.
+// shortcut: fixed 5MB; raise it if large screenshots ever need inlining.
+const MAX_INLINE_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
 export class CasesClient extends BaseTestRailClient {
 	/**
@@ -204,6 +210,169 @@ export class CasesClient extends BaseTestRailClient {
 	}
 
 	/**
+	 * Fetches several cases with one call. TestRail has no bulk get endpoint,
+	 * so this fans out to get_case; callers should prefer it over N getCase
+	 * calls so the batch is one tool call and one rate-limit budget.
+	 * Only a 404 lands an id in notFound; any other failure is rethrown so a
+	 * dead credential or throttled run never reads as "cases don't exist".
+	 * @param caseIds IDs to fetch (max 100)
+	 * @returns Cases in request order, plus the ids that were not found
+	 */
+	async getCasesByIds(
+		caseIds: GetCasesByIdsInput["caseIds"],
+	): Promise<{ cases: TestRailCase[]; notFound: number[] }> {
+		// Ten at a time stays well under TestRail Cloud's 180/minute budget;
+		// one unbounded Promise.all over 100 ids walks straight into the limiter.
+		const settled: (
+			| { ok: true; value: TestRailCase }
+			| { ok: false; id: number }
+		)[] = [];
+		for (let i = 0; i < caseIds.length; i += 10) {
+			const batch = await Promise.all(
+				caseIds.slice(i, i + 10).map(async (id) => {
+					try {
+						return { ok: true as const, value: await this.getCase(id) };
+					} catch (error) {
+						if (getErrorStatus(error) === 404)
+							return { ok: false as const, id };
+						throw error;
+					}
+				}),
+			);
+			settled.push(...batch);
+		}
+		return {
+			cases: settled.flatMap((r) => (r.ok ? [r.value] : [])),
+			notFound: settled.flatMap((r) => (r.ok ? [] : [r.id])),
+		};
+	}
+
+	/**
+	 * Lookup tables used to decode the enum-ish ids on a case. Each is a
+	 * single small GET; resolveCase calls them best-effort.
+	 */
+	async getPriorities(): Promise<{ id: number; name: string }[]> {
+		try {
+			const res = await this.client.get<{ id: number; name: string }[]>(
+				"/api/v2/get_priorities",
+			);
+			return res.data;
+		} catch (error) {
+			throw handleApiError(error, "Failed to get priorities");
+		}
+	}
+
+	async getStatuses(): Promise<{ id: number; name: string }[]> {
+		try {
+			const res = await this.client.get<{ id: number; name: string }[]>(
+				"/api/v2/get_statuses",
+			);
+			return res.data;
+		} catch (error) {
+			throw handleApiError(error, "Failed to get statuses");
+		}
+	}
+
+	async getTemplates(
+		projectId: number,
+	): Promise<{ id: number; name: string }[]> {
+		try {
+			const res = await this.client.get<{ id: number; name: string }[]>(
+				`/api/v2/get_templates/${projectId}`,
+			);
+			return res.data;
+		} catch (error) {
+			throw handleApiError(
+				error,
+				`Failed to get templates for project ${projectId}`,
+			);
+		}
+	}
+
+	/**
+	 * Lists a case's attachments (failure screenshots, data fixtures).
+	 * @param caseId The ID of the test case
+	 */
+	async getAttachmentsForCase(caseId: number) {
+		try {
+			const response = await this.client.get(
+				`/api/v2/get_attachments_for_case/${caseId}`,
+			);
+			return response.data as {
+				attachments: { id: number; name: string }[];
+				limit: number;
+				offset: number;
+				size: number;
+				_links: { next: string | null; prev: string | null };
+			};
+		} catch (error) {
+			throw handleApiError(
+				error,
+				`Failed to get attachments for test case ${caseId}`,
+			);
+		}
+	}
+
+	/**
+	 * Downloads one attachment as base64 for the caller to save. Binary
+	 * cannot travel in the JSON tool envelope, so it is encoded here.
+	 * Refuses files over the inline limit instead of letting the host
+	 * silently truncate the response tail.
+	 * @param attachmentId The ID of the attachment
+	 */
+	async getAttachment(
+		attachmentId: number,
+	): Promise<{ attachmentId: number; contentBase64: string }> {
+		try {
+			const response = await this.client.get<ArrayBuffer>(
+				`/api/v2/get_attachment/${attachmentId}`,
+				{ responseType: "arraybuffer" },
+			);
+			const bytes = Buffer.from(response.data);
+			if (bytes.length > MAX_INLINE_ATTACHMENT_BYTES) {
+				throw new Error(
+					`Attachment ${attachmentId} is ${(bytes.length / 1024 / 1024).toFixed(1)}MB, over the ${(MAX_INLINE_ATTACHMENT_BYTES / 1024 / 1024).toFixed(0)}MB inline limit; download it from TestRail directly`,
+				);
+			}
+			return { attachmentId, contentBase64: bytes.toString("base64") };
+		} catch (error) {
+			throw handleApiError(error, `Failed to get attachment ${attachmentId}`);
+		}
+	}
+
+	/**
+	 * Uploads a file from the server host to a case. Follows the addBdd
+	 * multipart pattern; the file is streamed, never held in memory whole.
+	 * The file must already be readable, and it becomes visible on the case,
+	 * so only attach files meant to be published there.
+	 * @param caseId The ID of the test case
+	 * @param filePath Absolute path of the file to attach
+	 */
+	async addAttachmentToCase(caseId: number, filePath: string) {
+		try {
+			const { createReadStream, constants } = await import("node:fs");
+			const { access } = await import("node:fs/promises");
+			const { basename } = await import("node:path");
+			// Fail here with a named path instead of a stream error mid-upload.
+			await access(filePath, constants.R_OK);
+			const FormData = (await import("form-data")).default;
+			const form = new FormData();
+			form.append("attachment", createReadStream(filePath), basename(filePath));
+			const response = await this.client.post(
+				`/api/v2/add_attachment_to_case/${caseId}`,
+				form,
+				{ headers: form.getHeaders() },
+			);
+			return response.data;
+		} catch (error) {
+			throw handleApiError(
+				error,
+				`Failed to add attachment to test case ${caseId}`,
+			);
+		}
+	}
+
+	/**
 	 * Gets the history of changes for a specific test case
 	 * @param caseId The ID of the test case
 	 * @returns Promise with test case history
@@ -314,7 +483,7 @@ export class CasesClient extends BaseTestRailClient {
 	 * @param caseIds Array of test case IDs to update
 	 */
 	async updateCases(
-		projectId: GetTestCasesInput["projectId"] | undefined,
+		_projectId: GetTestCasesInput["projectId"] | undefined,
 		suiteId: number,
 		data: UpdateCaseData,
 		caseIds: UpdateTestCaseInput["caseId"][],

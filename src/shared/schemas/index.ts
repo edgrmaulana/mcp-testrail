@@ -30,3 +30,6 @@ export * from "./suites.js";
 
 // Test plan related schemas
 export * from "./plans.js";
+
+// User and configuration related schemas
+export * from "./users.js";

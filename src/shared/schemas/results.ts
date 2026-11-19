@@ -162,6 +162,10 @@ export const addResultsForCasesSchema = {
 				.strict(),
 		)
 		.describe("Array of test case results to add"),
+	dryRun: z
+		.boolean()
+		.optional()
+		.describe("Preview only: echo the results without adding anything"),
 };
 
 // Create Zod objects from each schema

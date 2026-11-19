@@ -3,6 +3,7 @@ import { TestRailClient } from "../../client/api/index.js";
 import {
 	createSuccessResponse,
 	createErrorResponse,
+	paginateArray,
 	registerStrictTool,
 } from "./utils.js";
 import {
@@ -26,15 +27,24 @@ export function registerProjectTools(
 	registerStrictTool(
 		server,
 		"getProjects",
-		"Retrieves all TestRail projects",
-		{},
-		async (args, extra) => {
+		"Retrieves all TestRail projects. OPTIONAL: limit, offset for paging; repeat with offset advanced by limit while pagination.hasMore is true.",
+		{
+			limit: getProjectsSchema.shape.limit,
+			offset: getProjectsSchema.shape.offset,
+		},
+		async (args) => {
 			try {
 				const projects = await testRailClient.projects.getProjects();
+				const { page, pagination } = paginateArray(
+					projects,
+					args.limit,
+					args.offset,
+				);
 				const successResponse = createSuccessResponse(
 					"Projects retrieved successfully",
 					{
-						data: projects,
+						data: page,
+						pagination,
 					},
 				);
 				return successResponse;
@@ -58,7 +68,7 @@ export function registerProjectTools(
 				"TestRail Project ID to retrieve",
 			),
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { projectId } = args;
 				const project = await testRailClient.projects.getProject(projectId);

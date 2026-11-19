@@ -3,6 +3,12 @@ import { z } from "zod";
 // Schema for retrieving all suites in a project
 export const getSuitesSchema = z.object({
 	projectId: z.number().describe("TestRail Project ID"),
+	limit: z
+		.number()
+		.min(1)
+		.optional()
+		.describe("Maximum suites to return (omitted: all)"),
+	offset: z.number().optional().describe("Suites to skip (default 0)"),
 });
 
 // Schema for retrieving a specific suite

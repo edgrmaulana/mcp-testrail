@@ -177,10 +177,20 @@ export function registerResultTools(
 	registerStrictTool(
 		server,
 		"addResultsForCases",
-		"Adds test results for multiple test cases in a test run",
+		"Adds test results for multiple test cases in a test run. Pass dryRun to preview instead.",
 		addResultsForCasesSchema,
-		async ({ runId, results }) => {
+		async ({ runId, results, dryRun }) => {
 			try {
+				if (dryRun) {
+					return createSuccessResponse(
+						`Dry run: ${results.length} result(s) would be added to run ${runId} (nothing changed)`,
+						{
+							runId,
+							count: results.length,
+							caseIds: results.map((r) => r.caseId),
+						},
+					);
+				}
 				// Prepare data to send to the API
 				const data = {
 					results: results.map((result) => {

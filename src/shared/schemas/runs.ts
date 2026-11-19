@@ -79,17 +79,50 @@ export const updateRunSchema = {
 	refs: z.string().optional().describe("Reference/requirement IDs"),
 };
 
+// Schema for closing a test run (reversible; prefer over deleteRun)
+export const closeRunSchema = {
+	runId: z.number().describe("TestRail Run ID"),
+};
+
+// Schema for listing a project's configuration groups (run matrices).
+// get_configs answers the configIds addRun already accepts.
+export const getConfigurationsSchema = {
+	projectId: z.number().describe("TestRail Project ID"),
+	limit: z
+		.number()
+		.min(1)
+		.optional()
+		.describe("Maximum groups to return (omitted: all)"),
+	offset: z.number().optional().describe("Groups to skip (default 0)"),
+};
+
+// Schema for deleting a test run
+// (close_run is the reversible alternative; delete_run cannot be undone)
+export const deleteRunSchema = {
+	runId: z.number().describe("TestRail Run ID"),
+	dryRun: z
+		.boolean()
+		.optional()
+		.describe("Preview only: echo the target without deleting anything"),
+};
+
 // Create Zod objects from each schema
 export const GetRunsInput = z.object(getRunsSchema);
 export const GetRunInput = z.object(getRunSchema);
 export const AddRunInput = z.object(addRunSchema);
 export const UpdateRunInput = z.object(updateRunSchema);
+export const CloseRunInput = z.object(closeRunSchema);
+export const GetConfigurationsInput = z.object(getConfigurationsSchema);
+export const DeleteRunInput = z.object(deleteRunSchema);
 
 // Extract input types
 export type GetRunsInputType = z.infer<typeof GetRunsInput>;
 export type GetRunInputType = z.infer<typeof GetRunInput>;
 export type AddRunInputType = z.infer<typeof AddRunInput>;
 export type UpdateRunInputType = z.infer<typeof UpdateRunInput>;
+export type CloseRunInputType = z.infer<typeof CloseRunInput>;
+export type GetConfigurationsInputType = z.infer<typeof GetConfigurationsInput>;
+export type DeleteRunInputType = z.infer<typeof DeleteRunInput>;
 
 // -----------------------------------------------
 // Response schema definitions - migrated from types.ts
@@ -146,3 +179,21 @@ export const TestRailRunSchema = z.object({
 	refs: z.string(),
 });
 export type TestRailRun = z.infer<typeof TestRailRunSchema>;
+
+/**
+ * TestRail API Response for Configuration Group
+ */
+export const TestRailConfigurationGroupSchema = z.object({
+	id: z.number(),
+	name: z.string(),
+	project_id: z.number(),
+	configs: z.array(
+		z.object({
+			id: z.number(),
+			name: z.string(),
+		}),
+	),
+});
+export type TestRailConfigurationGroup = z.infer<
+	typeof TestRailConfigurationGroupSchema
+>;

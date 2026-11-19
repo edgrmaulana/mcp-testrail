@@ -2,9 +2,14 @@ import { AxiosError } from "axios";
 
 /**
  * Extracts the HTTP status from an axios error, or undefined if not an HTTP response.
+ * Falls back to a carried `.status`: handleApiError rewords axios failures
+ * into plain Errors, so batched callers read the status back off those.
  */
 export function getErrorStatus(error: unknown): number | undefined {
-	return (error as AxiosError)?.response?.status;
+	return (
+		(error as AxiosError)?.response?.status ??
+		(error as { status?: number })?.status
+	);
 }
 
 /**
@@ -24,10 +29,15 @@ export function handleApiError(error: unknown, message: string): Error {
 				`${message}: ${JSON.stringify({ response: { status, data: responseData } })}`,
 			);
 			// Surface TestRail's own error body instead of the generic
-			// "Request failed with status code NNN" axios message.
+			// "Request failed with status code NNN" axios message. The status
+			// rides along as a property so batched callers can tell a 404
+			// apart from a dead credential after the rewording.
 			const apiMessage = responseData?.error;
 			if (apiMessage) {
-				return new Error(`${message}: ${apiMessage} (status ${status})`);
+				return Object.assign(
+					new Error(`${message}: ${apiMessage} (status ${status})`),
+					{ status },
+				);
 			}
 		} else {
 			console.error(`${message}: ${error}`);

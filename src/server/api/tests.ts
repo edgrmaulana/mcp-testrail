@@ -39,7 +39,7 @@ export function registerTestTools(
 				.default(0)
 				.describe("Offset for pagination"),
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { runId, limit, offset } = args;
 				const tests = await testRailClient.tests.getTests(runId, {
@@ -73,7 +73,7 @@ export function registerTestTools(
 		{
 			testId: getTestSchema.shape.testId,
 		},
-		async (args, extra) => {
+		async (args) => {
 			try {
 				const { testId } = args;
 				const test = await testRailClient.tests.getTest(testId);

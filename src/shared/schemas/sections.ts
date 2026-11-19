@@ -43,6 +43,10 @@ export const moveSectionSchema = {
 		.nullable()
 		.optional()
 		.describe("ID of the section to position after"),
+	dryRun: z
+		.boolean()
+		.optional()
+		.describe("Preview only: echo the move without changing anything"),
 };
 
 // Schema for updating a section

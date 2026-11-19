@@ -3,6 +3,12 @@ import { z } from "zod";
 // Schema for retrieving a specific test case
 export const getTestCaseSchema = z.object({
 	caseId: z.number().describe("TestRail Case ID"),
+	fields: z
+		.array(z.string())
+		.optional()
+		.describe(
+			'Return only these keys (e.g. ["id","title","refs"]) to save context',
+		),
 });
 
 // Schema for retrieving all test cases in a project
@@ -71,6 +77,12 @@ export const getTestCasesSchema = z.object({
 		.array(z.number())
 		.optional()
 		.describe("A comma-separated list of label IDs to filter by"),
+	fields: z
+		.array(z.string())
+		.optional()
+		.describe(
+			'Return only these keys per case (e.g. ["id","title","refs"]) to save context. Bodies excluded by default stay excluded unless named here.',
+		),
 });
 
 // Schema for adding a test case
@@ -146,29 +158,109 @@ export const updateTestCaseSchema = z.object({
 // Schema for deleting a test case
 export const deleteTestCaseSchema = z.object({
 	caseId: z.number().describe("TestRail Case ID"),
+	dryRun: z
+		.boolean()
+		.optional()
+		.describe("Preview only: return the case title without deleting anything"),
 });
 
 // Schema for retrieving test case types
-export const getTestCaseTypesSchema = z.object({});
+export const getTestCaseTypesSchema = z.object({
+	limit: z
+		.number()
+		.min(1)
+		.optional()
+		.describe("Maximum types to return (omitted: all)"),
+	offset: z.number().optional().describe("Types to skip (default 0)"),
+});
 
 // Schema for retrieving test case fields
-export const getTestCaseFieldsSchema = z.object({});
+export const getTestCaseFieldsSchema = z.object({
+	namesOnly: z
+		.boolean()
+		.optional()
+		.describe(
+			"Return only system_name strings (~1KB) instead of the full 60KB definitions",
+		),
+	fields: z
+		.array(z.string())
+		.optional()
+		.describe(
+			'Return only these keys per field definition (e.g. ["system_name","label"])',
+		),
+	limit: z
+		.number()
+		.min(1)
+		.optional()
+		.describe("Maximum fields to return (omitted: all)"),
+	offset: z.number().optional().describe("Fields to skip (default 0)"),
+});
+
+// Fetch several cases in one tool call (TestRail has no bulk get;
+// the server fans out to get_case, so prefer this over N getCase calls)
+export const getCasesByIdsSchema = z.object({
+	caseIds: z
+		.array(z.number())
+		.min(1)
+		.max(100)
+		.describe("Array of TestRail Case IDs (max 100 per call)"),
+	fields: z
+		.array(z.string())
+		.optional()
+		.describe('Return only these keys per case (e.g. ["id","title","refs"])'),
+});
+
+// Schema for a decoded case: ids plus human-readable names and location path
+export const resolveCaseSchema = z.object({
+	caseId: z.number().describe("TestRail Case ID"),
+});
 
 // Schema for copying test cases to a section
 export const copyTestCasesToSectionSchema = z.object({
 	caseIds: z.array(z.number()).describe("Array of TestRail Case IDs"),
 	sectionId: z.number().describe("Target TestRail Section ID"),
+	dryRun: z
+		.boolean()
+		.optional()
+		.describe("Preview only: echo the targets without copying anything"),
 });
 
 // Schema for moving test cases to a section
 export const moveTestCasesToSectionSchema = z.object({
 	caseIds: z.array(z.number()).describe("Array of TestRail Case IDs"),
 	sectionId: z.number().describe("Target TestRail Section ID"),
+	dryRun: z
+		.boolean()
+		.optional()
+		.describe("Preview only: echo the targets without moving anything"),
 });
 
 // Schema for retrieving test case history
 export const getTestCaseHistorySchema = z.object({
 	caseId: z.number().describe("TestRail Case ID"),
+});
+
+// Schema for listing a case's attachments (failure screenshots, fixtures)
+export const getAttachmentsForCaseSchema = z.object({
+	caseId: z.number().describe("TestRail Case ID"),
+	limit: z
+		.number()
+		.min(1)
+		.optional()
+		.describe("Maximum attachments to return (omitted: all)"),
+	offset: z.number().optional().describe("Attachments to skip (default 0)"),
+});
+
+// Schema for downloading one attachment (returned as base64 for the caller to save)
+export const getAttachmentSchema = z.object({
+	attachmentId: z.number().describe("TestRail Attachment ID"),
+});
+
+// Schema for uploading a file to a case. filePath is read from the machine
+// the server runs on (stdio mode: the same host as the files).
+export const addAttachmentToCaseSchema = z.object({
+	caseId: z.number().describe("TestRail Case ID"),
+	filePath: z.string().describe("Absolute path of the file to attach"),
 });
 
 // Schema for updating multiple test cases
@@ -208,6 +300,10 @@ export const updateTestCasesSchema = z.object({
 		.describe(
 			"Additional custom fields as key-value pairs (e.g., {custom_case_security_score: 'high'})",
 		),
+	dryRun: z
+		.boolean()
+		.optional()
+		.describe("Preview only: echo the payload without updating anything"),
 });
 
 // Create Zod objects from each schema
@@ -222,6 +318,8 @@ export const copyTestCasesToSectionInputSchema = copyTestCasesToSectionSchema;
 export const moveTestCasesToSectionInputSchema = moveTestCasesToSectionSchema;
 export const getTestCaseHistoryInputSchema = getTestCaseHistorySchema;
 export const updateTestCasesInputSchema = updateTestCasesSchema;
+export const getCasesByIdsInputSchema = getCasesByIdsSchema;
+export const resolveCaseInputSchema = resolveCaseSchema;
 
 // Extract input types
 export type GetTestCaseInput = z.infer<typeof getTestCaseInputSchema>;
@@ -243,6 +341,8 @@ export type GetTestCaseHistoryInput = z.infer<
 	typeof getTestCaseHistoryInputSchema
 >;
 export type UpdateTestCasesInput = z.infer<typeof updateTestCasesInputSchema>;
+export type GetCasesByIdsInput = z.infer<typeof getCasesByIdsInputSchema>;
+export type ResolveCaseInput = z.infer<typeof resolveCaseInputSchema>;
 
 // -----------------------------------------------
 // Response schema definitions migrated from types.ts

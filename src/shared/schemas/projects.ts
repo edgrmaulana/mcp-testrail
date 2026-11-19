@@ -1,7 +1,14 @@
 import { z } from "zod";
 
 // Schema for retrieving all projects
-export const getProjectsSchema = z.object({});
+export const getProjectsSchema = z.object({
+	limit: z
+		.number()
+		.min(1)
+		.optional()
+		.describe("Maximum projects to return (omitted: all)"),
+	offset: z.number().optional().describe("Projects to skip (default 0)"),
+});
 
 // Schema for retrieving a specific project
 export const getProjectSchema = z.object({
