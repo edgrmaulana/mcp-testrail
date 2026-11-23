@@ -59,7 +59,16 @@ export const updateSectionSchema = {
 // Schema for deleting a section
 export const deleteSectionSchema = {
 	sectionId: z.number().describe("TestRail Section ID"),
-	soft: z.boolean().optional().describe("True for soft delete (preview only)"),
+	dryRun: z
+		.boolean()
+		.optional()
+		.describe(
+			"Preview only: resolve the section and list the cases that would be deleted (id + title, capped) without deleting anything. Validates the section exists (404 if not).",
+		),
+	soft: z
+		.boolean()
+		.optional()
+		.describe("Deprecated alias for dryRun, kept for backwards compatibility."),
 };
 
 // Create Zod objects from each schema

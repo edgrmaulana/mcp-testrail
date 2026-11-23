@@ -28,18 +28,23 @@ export function createSuccessResponse(
 		null,
 		2,
 	);
+	if (text.length <= RESPONSE_SIZE_HINT_BYTES) {
+		return { content: [{ type: "text", text }] };
+	}
+	// Oversized: data is intact (truncating an arbitrary key would corrupt
+	// it), but the host may cut the tail. Flag it so a missing tail reads
+	// as "page further" instead of "the data isn't there".
 	return {
 		content: [
 			{
 				type: "text",
-				text:
-					text.length > RESPONSE_SIZE_HINT_BYTES
-						? JSON.stringify({
-								message,
-								...(data || {}),
-								_sizeHint: `Response is ~${Math.round(text.length / 1024)}KB; use fields, namesOnly, limit/offset, or getAttachmentsForCase pagination to shrink it.`,
-							})
-						: text,
+				text: JSON.stringify({
+					message,
+					...(data || {}),
+					truncated: true,
+					hasMore: true,
+					_sizeHint: `Response is ~${Math.round(text.length / 1024)}KB; use fields, namesOnly, limit/offset, or getAttachmentsForCase pagination to shrink it, and repeat with offset advanced by limit while pagination.hasMore is true.`,
+				}),
 			},
 		],
 	};

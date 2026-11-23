@@ -62,6 +62,41 @@ describe("delete dryRun previews", () => {
 		expect(post).not.toHaveBeenCalled();
 	});
 
+	it("previews a section deletion with its cases and posts nothing", async () => {
+		const post = vi.fn();
+		const { payload } = await callTool(
+			(url) => {
+				if (url === "/api/v2/get_section/4")
+					return Promise.resolve({
+						data: { id: 4, name: "Old section", suite_id: 2 },
+					});
+				if (url === "/api/v2/get_suite/2")
+					return Promise.resolve({
+						data: { id: 2, name: "Suite", project_id: 5 },
+					});
+				if (url === "/api/v2/get_cases/5")
+					return Promise.resolve({
+						data: {
+							cases: [{ id: 9, title: "Old case" }],
+							offset: 0,
+							limit: 51,
+							size: 1,
+							_links: { next: null, prev: null },
+						},
+					});
+				return Promise.reject(new Error(`unexpected GET ${url}`));
+			},
+			post,
+			"deleteSection",
+			{ sectionId: 4, dryRun: true },
+		);
+
+		expect(payload.section).toEqual({ id: 4, name: "Old section" });
+		expect(payload.cases).toEqual([{ id: 9, title: "Old case" }]);
+		expect(payload.message).toMatch(/dry run/i);
+		expect(post).not.toHaveBeenCalled();
+	});
+
 	it("previews a run deletion with its name and posts nothing", async () => {
 		const post = vi.fn();
 		const { payload } = await callTool(

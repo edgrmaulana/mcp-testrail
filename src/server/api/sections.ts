@@ -239,15 +239,37 @@ export function registerSectionTools(
 	registerStrictTool(
 		server,
 		"deleteSection",
-		"Deletes a section and all of its test cases, which cannot be undone. REQUIRED: sectionId. OPTIONAL: soft - true previews the deletion instead of performing it, returning the number of affected cases without removing anything.",
+		"Deletes a section and all of its test cases, which cannot be undone. Pass dryRun to preview instead: resolves the section and lists the cases that would be deleted (id + title, capped at 50) without deleting anything. Validates the section exists.",
 		deleteSectionSchema,
-		async ({ sectionId, soft }) => {
+		async ({ sectionId, dryRun, soft }) => {
 			try {
-				const result = await testRailClient.sections.deleteSection(
-					sectionId,
-					soft,
-				);
-				return describeSectionDeletion(sectionId, soft, result);
+				if (dryRun || soft) {
+					// Local preview: resolve the section (404 if missing), then list
+					// the cases that would be destroyed. Nothing is posted, so a
+					// preview can never delete for real.
+					const section = await testRailClient.sections.getSection(sectionId);
+					const suite = await testRailClient.suites.getSuite(section.suite_id);
+					const { cases } = await testRailClient.cases.getCases(
+						suite.project_id,
+						section.suite_id,
+						{ section_id: sectionId, limit: 51, offset: 0 },
+					);
+					const preview = cases.slice(0, 50).map((c) => ({
+						id: c.id,
+						title: c.title,
+					}));
+					return createSuccessResponse(
+						`Dry run: section ${sectionId} ("${section.name}") would be deleted with ${cases.length > 50 ? "50+" : cases.length} case(s) (nothing changed)`,
+						{
+							section: { id: section.id, name: section.name },
+							cases: preview,
+							count: cases.length > 50 ? 50 : cases.length,
+							hasMore: cases.length > 50,
+						},
+					);
+				}
+				const result = await testRailClient.sections.deleteSection(sectionId);
+				return describeSectionDeletion(sectionId, false, result);
 			} catch (error) {
 				const errorResponse = createErrorResponse(
 					`Error deleting section ${sectionId}`,

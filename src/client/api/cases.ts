@@ -314,30 +314,51 @@ export class CasesClient extends BaseTestRailClient {
 	}
 
 	/**
-	 * Downloads one attachment as base64 for the caller to save. Binary
-	 * cannot travel in the JSON tool envelope, so it is encoded here.
-	 * Refuses files over the inline limit instead of letting the host
-	 * silently truncate the response tail.
+	 * Fetches one attachment's raw bytes plus its mime type. Shared by the
+	 * base64 tool and the save-to-disk path so both enforce the same guard.
 	 * @param attachmentId The ID of the attachment
+	 * @param maxBytes Refuse files over this many bytes (defaults to the inline limit)
 	 */
-	async getAttachment(
+	async getAttachmentBytes(
 		attachmentId: number,
-	): Promise<{ attachmentId: number; contentBase64: string }> {
+		maxBytes?: number,
+	): Promise<{ bytes: Buffer; mimeType?: string }> {
 		try {
 			const response = await this.client.get<ArrayBuffer>(
 				`/api/v2/get_attachment/${attachmentId}`,
 				{ responseType: "arraybuffer" },
 			);
 			const bytes = Buffer.from(response.data);
-			if (bytes.length > MAX_INLINE_ATTACHMENT_BYTES) {
+			const cap = maxBytes ?? MAX_INLINE_ATTACHMENT_BYTES;
+			if (bytes.length > cap) {
 				throw new Error(
-					`Attachment ${attachmentId} is ${(bytes.length / 1024 / 1024).toFixed(1)}MB, over the ${(MAX_INLINE_ATTACHMENT_BYTES / 1024 / 1024).toFixed(0)}MB inline limit; download it from TestRail directly`,
+					`Attachment ${attachmentId} is ${(bytes.length / 1024 / 1024).toFixed(1)}MB, over the ${(cap / 1024 / 1024).toFixed(0)}MB inline limit; download it from TestRail directly`,
 				);
 			}
-			return { attachmentId, contentBase64: bytes.toString("base64") };
+			// SAFETY: headers come from axios, not the caller; reading one key is exact.
+			const mimeType = (
+				response.headers as Record<string, unknown> | undefined
+			)?.["content-type"] as string | undefined;
+			return { bytes, mimeType };
 		} catch (error) {
 			throw handleApiError(error, `Failed to get attachment ${attachmentId}`);
 		}
+	}
+
+	/**
+	 * Downloads one attachment as base64 for the caller to save. Binary
+	 * cannot travel in the JSON tool envelope, so it is encoded here.
+	 * Refuses files over the inline limit instead of letting the host
+	 * silently truncate the response tail.
+	 * @param attachmentId The ID of the attachment
+	 * @param maxBytes Refuse files over this many bytes (defaults to the inline limit)
+	 */
+	async getAttachment(
+		attachmentId: number,
+		maxBytes?: number,
+	): Promise<{ attachmentId: number; contentBase64: string }> {
+		const { bytes } = await this.getAttachmentBytes(attachmentId, maxBytes);
+		return { attachmentId, contentBase64: bytes.toString("base64") };
 	}
 
 	/**
