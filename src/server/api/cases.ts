@@ -283,7 +283,7 @@ export function registerCaseTools(
 	registerStrictTool(
 		server,
 		"getCase",
-		"Retrieves complete details for a single test case including steps, expected results, and prerequisites. REQUIRED: caseId.",
+		"Retrieves complete details for a single test case including steps, expected results, and prerequisites. Enum ids (type_id, priority_id, custom_automation_status) are project-scoped: use resolveCase to read them as names. REQUIRED: caseId.",
 		{
 			caseId: getTestCaseSchema.shape.caseId,
 			fields: getTestCaseSchema.shape.fields,
@@ -666,7 +666,7 @@ export function registerCaseTools(
 	registerStrictTool(
 		server,
 		"resolveCase",
-		"Returns a case with its ids decoded into names: project/suite/section path, type, priority, template and status. Use when the raw payload's numeric ids are opaque.",
+		"Returns a case with its ids decoded into names: project/suite/section path, type, priority, template and status. Enum ids are project-scoped (e.g. custom_automation_status 3 means different things per project), so prefer this over reading raw getCase ids.",
 		{
 			caseId: resolveCaseSchema.shape.caseId,
 		},
@@ -846,16 +846,22 @@ export function registerCaseTools(
 	registerStrictTool(
 		server,
 		"getCaseHistory",
-		"Retrieves the change history of a test case including updates to fields and custom fields",
-		{ caseId: getTestCaseHistorySchema.shape.caseId },
+		"Retrieves the change history of a test case including updates to fields and custom fields. Histories are unbounded: pass limit/offset and repeat with offset advanced by limit while pagination.hasMore is true.",
+		{
+			caseId: getTestCaseHistorySchema.shape.caseId,
+			limit: getTestCaseHistorySchema.shape.limit,
+			offset: getTestCaseHistorySchema.shape.offset,
+		},
 		async (args) => {
 			try {
-				const { caseId } = args;
+				const { caseId, limit, offset } = args;
 				const history = await testRailClient.cases.getCaseHistory(caseId);
+				const { page, pagination } = paginateArray(history, limit, offset);
 				const successResponse = createSuccessResponse(
 					"Test case history retrieved successfully",
 					{
-						history,
+						history: page,
+						pagination,
 					},
 				);
 				return successResponse;
@@ -1020,18 +1026,41 @@ export function registerCaseTools(
 		},
 	);
 
-	// Download one attachment as base64
+	// Download one attachment as base64, or save it to disk
 	registerStrictTool(
 		server,
 		"getAttachment",
-		"Downloads one attachment, returned as base64 for the caller to save. REQUIRED: attachmentId.",
+		"Downloads one attachment: base64 by default, or pass saveToPath to write the file on the server host and get back path + size instead (a 2MB screenshot is ~2.7MB of base64 in context). maxBytes refuses oversized files with a clear error. REQUIRED: attachmentId.",
 		{
 			attachmentId: getAttachmentSchema.shape.attachmentId,
+			saveToPath: getAttachmentSchema.shape.saveToPath,
+			maxBytes: getAttachmentSchema.shape.maxBytes,
 		},
 		async (args) => {
 			try {
+				if (args.saveToPath) {
+					// Server-side write: bytes go to disk, never into context.
+					const { bytes, mimeType } =
+						await testRailClient.cases.getAttachmentBytes(
+							args.attachmentId,
+							args.maxBytes,
+						);
+					const { mkdir, writeFile } = await import("node:fs/promises");
+					const { dirname } = await import("node:path");
+					await mkdir(dirname(args.saveToPath), { recursive: true });
+					await writeFile(args.saveToPath, bytes);
+					return createSuccessResponse("Attachment saved successfully", {
+						attachment: {
+							attachmentId: args.attachmentId,
+							savedTo: args.saveToPath,
+							sizeBytes: bytes.length,
+							...(mimeType ? { mimeType } : {}),
+						},
+					});
+				}
 				const attachment = await testRailClient.cases.getAttachment(
 					args.attachmentId,
+					args.maxBytes,
 				);
 				return createSuccessResponse("Attachment retrieved successfully", {
 					attachment,

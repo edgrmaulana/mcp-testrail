@@ -3,6 +3,40 @@
 Notable changes to `@edgrmaulana/mcp-testrail`. Releases before 0.23.0 are
 listed at [Releases](https://github.com/edgrmaulana/mcp-testrail/releases).
 
+## 0.25.1 - 2026-11-19
+
+### Fixed
+
+**`deleteSection` finally has `dryRun`**
+
+The most destructive call in the server (it deletes a section and all of its
+cases) was the only one without a `dryRun` preview. It now mirrors
+`deleteCase`: validates the section exists (404 if not) and returns the
+section plus the cases that would be deleted (id + title, capped at 50) with
+`hasMore` when capped — posting nothing. `soft` is kept as a deprecated alias.
+
+**Unbounded histories are now pageable**
+
+`getCaseHistory` accepts `limit`/`offset` and returns `pagination.hasMore` like
+every other list tool, and oversized responses are flagged with
+`truncated: true` plus a shrinking hint instead of relying on the host to cut
+the tail silently.
+
+**Attachments no longer force base64 into context**
+
+`getAttachment` accepts `saveToPath` (writes the file on the server host and
+returns path + size instead of base64) and `maxBytes` (refuses oversized files
+with a clear error instead of a truncated tail).
+
+### Changed
+
+- Tool descriptions now state the semantics that were only implicit: `dryRun`
+  validates the target and changes nothing, unknown `fields` keys are silently
+  ignored, `namesOnly` takes precedence on `getCaseFields`, and `getCase` enum
+  ids are project-scoped — `resolveCase` is the supported way to read them.
+- README tool table regenerated (was still the old 42-tool list); new tools
+  and the `limit`/`offset`/`fields`/`dryRun` conventions are documented.
+
 ## 0.24.1 - 2026-10-08
 
 ### Fixed

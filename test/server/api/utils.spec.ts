@@ -33,6 +33,7 @@ describe("server response helpers", () => {
 
 		expect(payload.big).toBe(big);
 		expect(payload._sizeHint).toMatch(/fields/);
+		expect(payload.truncated).toBe(true);
 	});
 
 	it("leaves small responses alone", () => {

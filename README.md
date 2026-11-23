@@ -10,14 +10,24 @@ The TestRail MCP server provides the following tools:
 |----------|-------|
 | **Projects** | `getProjects`, `getProject` |
 | **Suites** | `getSuites`, `getSuite`, `addSuite`, `updateSuite` |
-| **Cases** | `getCase`, `getCases`, `addCase`, `updateCase`, `deleteCase`, `getCaseTypes`, `getCaseFields`, `copyToSection`, `moveToSection`, `getCaseHistory`, `updateCases`, `addBdd`, `getBdd` |
+| **Cases** | `getCase`, `getCases`, `getCasesByIds`, `resolveCase`, `addCase`, `updateCase`, `deleteCase`, `getCaseTypes`, `getCaseFields`, `copyToSection`, `moveToSection`, `getCaseHistory`, `updateCases`, `addBdd`, `getBdd`, `getAttachmentsForCase`, `getAttachment`, `addAttachmentToCase` |
 | **Sections** | `getSection`, `getSections`, `addSection`, `moveSection`, `updateSection`, `deleteSection` |
-| **Runs** | `getRuns`, `getRun`, `addRun`, `updateRun` |
+| **Runs** | `getRuns`, `getRun`, `addRun`, `updateRun`, `closeRun`, `deleteRun`, `getConfigurations` |
 | **Tests** | `getTests`, `getTest` |
 | **Results** | `getResults`, `getResultsForCase`, `getResultsForRun`, `addResultForCase`, `addResultsForCases` |
-| **Plans** | `getPlans` |
+| **Plans** | `getPlans`, `addPlan`, `addPlanEntry`, `addRunToPlanEntry` |
 | **Milestones** | `getMilestones` |
 | **Shared Steps** | `getSharedSteps` |
+| **Users** | `getUsers`, `getUser` |
+| **Utility** | `getRateLimitStats` |
+
+Many list tools accept `limit`/`offset` (repeat with offset advanced by
+limit while `pagination.hasMore` is true), `fields` (return only these keys;
+unknown keys are silently ignored), and destructive tools accept `dryRun`
+(validates the target exists and previews without changing anything).
+`getCase` ids are project-scoped — use `resolveCase` to read them as names.
+`getAttachment` writes to disk with `saveToPath` for large files instead of
+returning base64.
 
 ## Usage
 

@@ -7,7 +7,7 @@ export const getTestCaseSchema = z.object({
 		.array(z.string())
 		.optional()
 		.describe(
-			'Return only these keys (e.g. ["id","title","refs"]) to save context',
+			'Return only these keys (e.g. ["id","title","refs"]) to save context. Unknown keys are silently ignored.',
 		),
 });
 
@@ -161,7 +161,9 @@ export const deleteTestCaseSchema = z.object({
 	dryRun: z
 		.boolean()
 		.optional()
-		.describe("Preview only: return the case title without deleting anything"),
+		.describe(
+			"Preview only: validates the case exists (404 if not) and returns its id + title without deleting anything.",
+		),
 });
 
 // Schema for retrieving test case types
@@ -180,13 +182,13 @@ export const getTestCaseFieldsSchema = z.object({
 		.boolean()
 		.optional()
 		.describe(
-			"Return only system_name strings (~1KB) instead of the full 60KB definitions",
+			"Return only system_name strings (~1KB) instead of the full 60KB definitions. Takes precedence when both are given; order follows the API.",
 		),
 	fields: z
 		.array(z.string())
 		.optional()
 		.describe(
-			'Return only these keys per field definition (e.g. ["system_name","label"])',
+			'Return only these keys per field definition (e.g. ["system_name","label"]). Unknown keys are silently ignored.',
 		),
 	limit: z
 		.number()
@@ -207,7 +209,9 @@ export const getCasesByIdsSchema = z.object({
 	fields: z
 		.array(z.string())
 		.optional()
-		.describe('Return only these keys per case (e.g. ["id","title","refs"])'),
+		.describe(
+			'Return only these keys per case (e.g. ["id","title","refs"]). Unknown keys are silently ignored.',
+		),
 });
 
 // Schema for a decoded case: ids plus human-readable names and location path
@@ -238,6 +242,14 @@ export const moveTestCasesToSectionSchema = z.object({
 // Schema for retrieving test case history
 export const getTestCaseHistorySchema = z.object({
 	caseId: z.number().describe("TestRail Case ID"),
+	limit: z
+		.number()
+		.min(1)
+		.optional()
+		.describe(
+			"Maximum history entries to return (omitted: all). Histories are unbounded, so pass a limit and page with offset on busy cases.",
+		),
+	offset: z.number().optional().describe("History entries to skip (default 0)"),
 });
 
 // Schema for listing a case's attachments (failure screenshots, fixtures)
@@ -251,9 +263,23 @@ export const getAttachmentsForCaseSchema = z.object({
 	offset: z.number().optional().describe("Attachments to skip (default 0)"),
 });
 
-// Schema for downloading one attachment (returned as base64 for the caller to save)
+// Schema for downloading one attachment (returned as base64 for the caller to save,
+// or written to saveToPath so large files never enter model context)
 export const getAttachmentSchema = z.object({
 	attachmentId: z.number().describe("TestRail Attachment ID"),
+	saveToPath: z
+		.string()
+		.optional()
+		.describe(
+			"Absolute path to write the file to (server host). When set, returns path + size instead of base64.",
+		),
+	maxBytes: z
+		.number()
+		.min(1)
+		.optional()
+		.describe(
+			"Refuse files over this many bytes (default 5MB). A 2MB file is ~2.7MB of base64 in context.",
+		),
 });
 
 // Schema for uploading a file to a case. filePath is read from the machine
